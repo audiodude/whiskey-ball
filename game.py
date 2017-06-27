@@ -52,11 +52,13 @@ class GameOverDisplay(object):
         self.bottom_idx = 0
 
 class MainDisplay(object):
-  def __init__(self, total_time=40):
+  def __init__(self):
     self.top = pygame.Surface(half)
     self.bottom = pygame.Surface(half)
     self.txt_score_header = fnt_default_200.render('score:', 1, clr_neon_pink)
     self.txt_time_header = fnt_default_200.render('time:', 1, clr_white)
+
+  def reset(self, total_time=40):
     self.rem_secs = total_time
     self.elapsed = 0
 
@@ -73,7 +75,12 @@ class MainDisplay(object):
     screen.blit(self.bottom, (0, height//2))
 
   def update(self, tick):
-    pass
+    self.elapsed += tick
+    if self.elapsed > 1000:
+      self.elapsed = 0
+      self.rem_secs -= 1
+      if self.rem_secs <= 0:
+        return True
 
 class Game(object):
   def __init__(self):
@@ -84,14 +91,18 @@ class Game(object):
     self.score = 0
 
   def start(self):
-    self.current_state = self.main_display
+    if self.current_state == self.game_over:
+      self.main_display.reset()
+      self.current_state = self.main_display
 
   def draw(self):
     self.current_state.draw()
 
   def update(self):
     tick = self.clock.tick()
-    self.current_state.update(tick)
+    result = self.current_state.update(tick)
+    if result and self.current_state == self.main_display:
+      self.current_state = self.game_over
 
 game = Game()
 def get_score():
