@@ -9,9 +9,13 @@ pygame.mouse.set_visible(False)
 width, height = 1024, 600
 half = width, height//2
 clr_grey = pygame.Color('#DDDDDD')
+clr_black = pygame.Color('#000000')
+clr_white = pygame.Color('#FFFFFF')
 clr_neon_blue = pygame.Color('#BBFFFF')
 clr_neon_pink = pygame.Color('#FF69B4')
 clr_neon_green = pygame.Color('#9AFF87')
+fnt_default_200 = pygame.font.Font(None, 200)
+fnt_default_300 = pygame.font.Font(None, 300)
 fnt_default_400 = pygame.font.Font(None, 400)
 
 class GameOverDisplay(object):
@@ -47,14 +51,40 @@ class GameOverDisplay(object):
       if self.bottom_idx > len(self.colors) - 1:
         self.bottom_idx = 0
 
+class MainDisplay(object):
+  def __init__(self, total_time=40):
+    self.top = pygame.Surface(half)
+    self.bottom = pygame.Surface(half)
+    self.txt_score_header = fnt_default_200.render('score:', 1, clr_neon_pink)
+    self.txt_time_header = fnt_default_200.render('time:', 1, clr_white)
+    self.rem_secs = total_time
+    self.elapsed = 0
+
+  def draw(self):
+    txt_score = fnt_default_300.render(str(get_score()), 1, clr_neon_pink)
+    txt_time = fnt_default_300.render(str(self.rem_secs), 1, clr_white)
+    self.top.fill(clr_neon_blue)
+    self.bottom.fill(clr_black)
+    self.top.blit(self.txt_score_header, (10, 0))
+    self.top.blit(self.txt_time_header, (640, 0))
+    self.top.blit(txt_score, (40, 120))
+    self.top.blit(txt_time, (680, 120))
+    screen.blit(self.top, (0, 0))
+    screen.blit(self.bottom, (0, height//2))
+
+  def update(self, tick):
+    pass
+
 class Game(object):
   def __init__(self):
     self.clock = pygame.time.Clock()
     self.game_over = GameOverDisplay()
+    self.main_display = MainDisplay()
     self.current_state = self.game_over
+    self.score = 0
 
   def start(self):
-    pass
+    self.current_state = self.main_display
 
   def draw(self):
     self.current_state.draw()
@@ -64,6 +94,9 @@ class Game(object):
     self.current_state.update(tick)
 
 game = Game()
+def get_score():
+  return game.score
+
 while True:
   for event in pygame.event.get():
     if event.type == pygame.QUIT:
