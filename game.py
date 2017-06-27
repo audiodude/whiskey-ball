@@ -14,8 +14,6 @@ clr_neon_pink = pygame.Color('#FF69B4')
 clr_neon_green = pygame.Color('#9AFF87')
 fnt_default_400 = pygame.font.Font(None, 400)
 
-area = pygame.Surface((width, height))
-
 class GameOverDisplay(object):
   def __init__(self):
     self.top = pygame.Surface(half)
@@ -23,7 +21,7 @@ class GameOverDisplay(object):
     self.txt_game = fnt_default_400.render('GAME', 1, clr_neon_pink)
     self.txt_over = fnt_default_400.render('OVER', 1, clr_neon_pink)
     self.elapsed = 0
-    self.clock = pygame.time.Clock()
+    self.cycles = 0
 
     self.colors = [clr_neon_blue, clr_neon_green, clr_neon_pink]
     self.top_idx = 0
@@ -37,10 +35,11 @@ class GameOverDisplay(object):
     screen.blit(self.top, (0, 0))
     screen.blit(self.bottom, (0, height//2))
 
-  def update(self):
-    self.elapsed += self.clock.tick()
+  def update(self, tick):
+    self.elapsed += tick
     if self.elapsed > 150:
       self.elapsed = 0
+      self.cycles += 1
       self.top_idx += 1
       self.bottom_idx += 1
       if self.top_idx > len(self.colors) - 1:
@@ -48,7 +47,23 @@ class GameOverDisplay(object):
       if self.bottom_idx > len(self.colors) - 1:
         self.bottom_idx = 0
 
-game_over = GameOverDisplay()
+class Game(object):
+  def __init__(self):
+    self.clock = pygame.time.Clock()
+    self.game_over = GameOverDisplay()
+    self.current_state = self.game_over
+
+  def start(self):
+    pass
+
+  def draw(self):
+    self.current_state.draw()
+
+  def update(self):
+    tick = self.clock.tick()
+    self.current_state.update(tick)
+
+game = Game()
 while True:
   for event in pygame.event.get():
     if event.type == pygame.QUIT:
@@ -56,8 +71,10 @@ while True:
     elif event.type == pygame.KEYDOWN:
       if event.key == pygame.K_ESCAPE:
         sys.exit()
+      elif event.key == pygame.K_SPACE:
+        game.start()
 
   screen.fill(clr_grey)
-  game_over.update()
-  game_over.draw()
+  game.update()
+  game.draw()
   pygame.display.flip()
