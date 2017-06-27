@@ -1,3 +1,4 @@
+import json
 import sys
 
 import pygame
@@ -18,8 +19,19 @@ fnt_default_200 = pygame.font.Font(None, 200)
 fnt_default_300 = pygame.font.Font(None, 300)
 fnt_default_400 = pygame.font.Font(None, 400)
 
+scoremap = json.load(open('scoremap.json'))
+scorekey_to_string = {
+  pygame.K_1: '1',
+  pygame.K_2: '2',
+  pygame.K_3: '3',
+  pygame.K_4: '4',
+  pygame.K_5: '5',
+  pygame.K_6: '6',
+}
+
 class GameOverDisplay(object):
-  def __init__(self):
+  def __init__(self, game):
+    self.game = game
     self.top = pygame.Surface(half)
     self.bottom = pygame.Surface(half)
     self.txt_game = fnt_default_400.render('GAME', 1, clr_neon_pink)
@@ -51,8 +63,13 @@ class GameOverDisplay(object):
       if self.bottom_idx > len(self.colors) - 1:
         self.bottom_idx = 0
 
+  def handle_key(self, keycode):
+    if keycode == pygame.K_SPACE:
+      self.game.goto_main()
+
 class MainDisplay(object):
-  def __init__(self):
+  def __init__(self, game):
+    self.game = game
     self.top = pygame.Surface(half)
     self.bottom = pygame.Surface(half)
     self.txt_score_header = fnt_default_200.render('score:', 1, clr_neon_pink)
@@ -63,7 +80,7 @@ class MainDisplay(object):
     self.elapsed = 0
 
   def draw(self):
-    txt_score = fnt_default_300.render(str(get_score()), 1, clr_neon_pink)
+    txt_score = fnt_default_300.render(str(game.score), 1, clr_neon_pink)
     txt_time = fnt_default_300.render(str(self.rem_secs), 1, clr_white)
     self.top.fill(clr_neon_blue)
     self.bottom.fill(clr_black)
@@ -79,21 +96,24 @@ class MainDisplay(object):
     if self.elapsed > 1000:
       self.elapsed = 0
       self.rem_secs -= 1
-      if self.rem_secs <= 0:
-        return True
+      if self.rem_secs < 0:
+        self.game.goto_game_over()
+
+  def handle_key(self, keycode):
+    string = scorekey_to_string.get(keycode, '0')
+    plus_score = scoremap.get(string, 0)
+    self.game.score += plus_score
 
 class Game(object):
   def __init__(self):
     self.clock = pygame.time.Clock()
-    self.game_over = GameOverDisplay()
-    self.main_display = MainDisplay()
+    self.game_over = GameOverDisplay(self)
+    self.main_display = MainDisplay(self)
     self.current_state = self.game_over
     self.score = 0
 
-  def start(self):
-    if self.current_state == self.game_over:
-      self.main_display.reset()
-      self.current_state = self.main_display
+  def handle_key(self, keycode):
+    self.current_state.handle_key(keycode)
 
   def draw(self):
     self.current_state.draw()
@@ -101,12 +121,16 @@ class Game(object):
   def update(self):
     tick = self.clock.tick()
     result = self.current_state.update(tick)
-    if result and self.current_state == self.main_display:
-      self.current_state = self.game_over
+
+  def goto_main(self):
+    self.score = 0
+    self.main_display.reset()
+    self.current_state = self.main_display    
+
+  def goto_game_over(self):
+    self.current_state = self.game_over
 
 game = Game()
-def get_score():
-  return game.score
 
 while True:
   for event in pygame.event.get():
@@ -115,8 +139,8 @@ while True:
     elif event.type == pygame.KEYDOWN:
       if event.key == pygame.K_ESCAPE:
         sys.exit()
-      elif event.key == pygame.K_SPACE:
-        game.start()
+      else:
+        game.handle_key(event.key)
 
   screen.fill(clr_grey)
   game.update()
