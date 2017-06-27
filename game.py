@@ -11,28 +11,42 @@ half = width, height//2
 clr_grey = pygame.Color('#DDDDDD')
 clr_neon_blue = pygame.Color('#BBFFFF')
 clr_neon_pink = pygame.Color('#FF69B4')
-clr_neon_green = pygame.Color('#59FF3A')
+clr_neon_green = pygame.Color('#9AFF87')
 fnt_default_400 = pygame.font.Font(None, 400)
 
 area = pygame.Surface((width, height))
 
 class GameOverDisplay(object):
-  top = pygame.Surface(half)
-  bottom = pygame.Surface(half)
-  txt_game = fnt_default_400.render('GAME', 1, clr_neon_pink)
-  txt_over = fnt_default_400.render('OVER', 1, clr_neon_pink)
-
   def __init__(self):
-    top_color = clr_neon_blue
-    bottom_color = clr_neon_green
-    self.top.fill(top_color)
-    self.bottom.fill(bottom_color)
+    self.top = pygame.Surface(half)
+    self.bottom = pygame.Surface(half)
+    self.txt_game = fnt_default_400.render('GAME', 1, clr_neon_pink)
+    self.txt_over = fnt_default_400.render('OVER', 1, clr_neon_pink)
+    self.elapsed = 0
+    self.clock = pygame.time.Clock()
+
+    self.colors = [clr_neon_blue, clr_neon_green, clr_neon_pink]
+    self.top_idx = 0
+    self.bottom_idx = 1
 
   def draw(self):
+    self.top.fill(self.colors[self.top_idx])
+    self.bottom.fill(self.colors[self.bottom_idx])
     self.top.blit(self.txt_game, (80, 30))
     self.bottom.blit(self.txt_over, (110, 30))
     screen.blit(self.top, (0, 0))
     screen.blit(self.bottom, (0, height//2))
+
+  def update(self):
+    self.elapsed += self.clock.tick()
+    if self.elapsed > 150:
+      self.elapsed = 0
+      self.top_idx += 1
+      self.bottom_idx += 1
+      if self.top_idx > len(self.colors) - 1:
+        self.top_idx = 0
+      if self.bottom_idx > len(self.colors) - 1:
+        self.bottom_idx = 0
 
 game_over = GameOverDisplay()
 while True:
@@ -44,5 +58,6 @@ while True:
         sys.exit()
 
   screen.fill(clr_grey)
+  game_over.update()
   game_over.draw()
   pygame.display.flip()
