@@ -93,7 +93,7 @@ class ScoreAnimation(object):
       return
 
     self.elapsed += tick
-    if (self.cycles > 1 and self.elapsed > 80) or self.elapsed > 400:
+    if (self.cycles > 1 and self.elapsed > 100) or self.elapsed > 500:
       self.elapsed = 0
       self.cycles += 1
       self.showing = not self.showing
@@ -143,6 +143,9 @@ class MainDisplay(object):
     plus_score = scoremap.get(string, 0)
     if plus_score:
       self.game.score += plus_score
+      if self.animate_score:
+        self.animate_score.showing = False
+        self.animate_score.draw()
       self.animate_score = ScoreAnimation(self.bottom, plus_score)
 
 class Game(object):
