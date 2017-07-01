@@ -74,6 +74,7 @@ class MainDisplay(object):
     self.bottom = pygame.Surface(half)
     self.txt_score_header = fnt_default_200.render('score:', 1, clr_neon_pink)
     self.txt_time_header = fnt_default_200.render('time:', 1, clr_white)
+    self.animate_score = 0
 
   def reset(self, total_time=40):
     self.rem_secs = total_time
@@ -84,6 +85,11 @@ class MainDisplay(object):
     txt_time = fnt_default_300.render(str(self.rem_secs), 1, clr_white)
     self.top.fill(clr_neon_blue)
     self.bottom.fill(clr_black)
+    if self.animate_score:
+      txt_scored = fnt_default_300.render(
+        str(self.animate_score), 1, clr_neon_blue)
+      self.bottom.blit(txt_scored, (40, 20))
+
     self.top.blit(self.txt_score_header, (10, 0))
     self.top.blit(self.txt_time_header, (640, 0))
     self.top.blit(txt_score, (40, 120))
@@ -102,7 +108,9 @@ class MainDisplay(object):
   def handle_key(self, keycode):
     string = scorekey_to_string.get(keycode, '0')
     plus_score = scoremap.get(string, 0)
-    self.game.score += plus_score
+    if plus_score:
+      self.game.score += plus_score
+      self.animate_score = plus_score
 
 class Game(object):
   def __init__(self):
