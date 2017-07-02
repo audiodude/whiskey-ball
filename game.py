@@ -17,7 +17,7 @@ pygame.init()
 screen = pygame.display.set_mode((0,0), pygame.FULLSCREEN)
 pygame.mouse.set_visible(False)
 
-GAME_DURATION_SECS = 40
+GAME_DURATION_SECS = 3
 width, height = 1024, 600
 half = width, height//2
 quarter = width, height//4
@@ -286,6 +286,8 @@ class DrinkDisplay(object):
       self.down_tier()
     elif keycode == pygame.K_PERIOD:
       self.up_tier()
+    elif keycode == pygame.K_SPACE:
+      self.pour_drink()
 
   def down_tier(self):
     self.left_arrow.animating = True
@@ -303,6 +305,9 @@ class DrinkDisplay(object):
 
   def update_tier(self):
     self.current_tier = self.next_tier
+
+  def pour_drink(self):
+    self.game.goto_game_over()
 
 class Game(object):
   def __init__(self):
