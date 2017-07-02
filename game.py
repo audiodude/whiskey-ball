@@ -17,7 +17,7 @@ pygame.init()
 screen = pygame.display.set_mode((0,0), pygame.FULLSCREEN)
 pygame.mouse.set_visible(False)
 
-GAME_DURATION_SECS = 40
+GAME_DURATION_SECS = 3
 USE_MUSIC = False
 
 width, height = 1024, 600
@@ -35,6 +35,7 @@ fnt_default_160 = pygame.font.Font(None, 160)
 fnt_default_200 = pygame.font.Font(None, 200)
 fnt_default_300 = pygame.font.Font(None, 300)
 fnt_default_400 = pygame.font.Font(None, 400)
+fnt_mono_200 = pygame.font.Font('DejaVuSansMono.ttf', 200)
 
 scoremap = json.load(open('scoremap.json'))
 scorekey_to_string = {
@@ -134,7 +135,6 @@ class MainDisplay(object):
     self.txt_time_header = fnt_default_200.render('time:', 1, clr_black)
     self.animate_score = None
 
-  def reset(self):
     self.rem_secs = GAME_DURATION_SECS
     self.elapsed = 0
     if USE_MUSIC:
@@ -222,6 +222,7 @@ class DrinkDisplay(object):
     self.left_arrow = Arrow('<', self)
     self.right_arrow = Arrow('>', self)
     self.focus = 'left'
+    self.init_tier()
 
   def init_tier(self):
     self.tiers = []
@@ -312,15 +313,128 @@ class DrinkDisplay(object):
     self.current_tier = self.next_tier
 
   def pour_drink(self):
+    self.game.goto_enter_score()
+
+class Initials(object):
+  delete = '⌫'
+  space = '␣'
+  checkmark = '✓'
+  alphabet = [
+    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O',
+    'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '!', '@', '#', '$',
+    '&', '*', '(', ')', space, delete,
+  ]
+  last_spot = [checkmark, delete]
+
+  def __init__(self, state):
+    self.state = state
+    self.elapsed = 0
+    self.cur_showing = True
+    self.top_idx = 0
+    self.ltr_indices = [0, -1, -1, -1]
+
+  def draw(self, surface):
+    text = []
+    positions = ((260, 40), (400, 40), (540, 40), (680, 40))
+    for i in range(4):
+      ltr = self.get_letter(i, show_space=self.top_idx == i)
+      txt = fnt_mono_200.render(ltr, 1, clr_neon_pink)
+      if self.top_idx != i or self.cur_showing:
+        surface.blit(txt, positions[i])
+
+  def update(self, tick):
+    self.elapsed += tick
+    if self.elapsed > 150:
+      self.elapsed = 0
+      self.cur_showing = not self.cur_showing
+
+  def go_up(self):
+    self.ltr_indices[self.top_idx] -= 1
+    if self.ltr_indices[self.top_idx] == -1:
+      if self.top_idx == 3:
+        self.ltr_indices[self.top_idx] = len(self.last_spot) - 1
+      else:
+        self.ltr_indices[self.top_idx] = len(self.alphabet) - 1
+
+  def go_down(self):
+    self.ltr_indices[self.top_idx] += 1
+    if ((self.top_idx == 3 and
+         self.ltr_indices[self.top_idx] == len(self.last_spot)) or
+        self.ltr_indices[self.top_idx] == len(self.alphabet)):
+      self.ltr_indices[self.top_idx] = 0
+
+  def get_letter(self, idx=None, show_space=False):
+    if idx is None:
+      idx = self.top_idx
+    if self.ltr_indices[idx] == -1:
+      return ' '
+    elif idx == 3:
+      return self.last_spot[self.ltr_indices[idx]]
+    else:
+      ltr = self.alphabet[self.ltr_indices[idx]]
+      return ' ' if ltr == self.space and not show_space else ltr
+
+  def enter(self):
+    ltr = self.get_letter()
+    if ltr == self.checkmark:
+      name = ''
+      for i in range(3):
+        name += self.get_letter(i)
+      self.state.record_score(name)
+    elif ltr == self.delete:
+      if self.top_idx != 0:
+        self.ltr_indices[self.top_idx] = -1
+        self.top_idx -= 1
+    else:
+      self.top_idx += 1
+      self.ltr_indices[self.top_idx] = 0
+
+class EnterScoreDisplay(object):
+  def __init__(self, game):
+    self.game = game
+    self.elapsed = 0
+    self.top = pygame.Surface(quarter)
+    self.middle = pygame.Surface(quarter)
+    self.bottom = pygame.Surface(half)
+    self.initials = Initials(self)
+
+  def draw(self):
+    self.top.fill(clr_black)
+    self.middle.fill(clr_neon_green)
+    self.bottom.fill(clr_neon_green)
+    txt_score = fnt_default_160.render(
+      'Your score: %s' % self.game.score, 1, clr_white)
+    self.top.blit(txt_score, (110, 20))
+
+    txt_enter = fnt_default_160.render(
+      'Enter your initials', 1, clr_black)
+    self.middle.blit(txt_enter, (20, 20))
+
+    self.initials.draw(self.bottom)
+
+    screen.blit(self.top, (0, 0))
+    screen.blit(self.middle, (0, height//4))
+    screen.blit(self.bottom, (0, height//2))
+
+  def update(self, tick):
+    self.initials.update(tick)
+
+  def handle_key(self, keycode):
+    if keycode == pygame.K_COMMA:
+      self.initials.go_up()
+    elif keycode == pygame.K_PERIOD:
+      self.initials.go_down()
+    elif keycode == pygame.K_SPACE:
+      self.initials.enter()
+
+  def record_score(self, name):
+    print(name)
     self.game.goto_game_over()
 
 class Game(object):
   def __init__(self):
     self.clock = pygame.time.Clock()
-    self.game_over = GameOverDisplay(self)
-    self.main_display = MainDisplay(self)
-    self.drink_display = DrinkDisplay(self)
-    self.current_state = self.game_over
+    self.current_state = GameOverDisplay(self)
     self.score = 0
 
   def handle_key(self, keycode):
@@ -335,15 +449,16 @@ class Game(object):
 
   def goto_main(self):
     self.score = 0
-    self.main_display.reset()
-    self.current_state = self.main_display    
+    self.current_state = MainDisplay(self)
 
   def goto_game_over(self):
-    self.current_state = self.game_over
+    self.current_state = GameOverDisplay(self)
 
   def goto_drink(self):
-    self.current_state = self.drink_display
-    self.drink_display.init_tier()
+    self.current_state = DrinkDisplay(self)
+
+  def goto_enter_score(self):
+    self.current_state = EnterScoreDisplay(self)
 
 game = Game()
 
