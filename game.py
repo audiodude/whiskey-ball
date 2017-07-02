@@ -17,6 +17,7 @@ pygame.init()
 screen = pygame.display.set_mode((0,0), pygame.FULLSCREEN)
 pygame.mouse.set_visible(False)
 
+GAME_DURATION_SECS = 40
 width, height = 1024, 600
 half = width, height//2
 quarter = width, height//4
@@ -131,9 +132,11 @@ class MainDisplay(object):
     self.txt_time_header = fnt_default_200.render('time:', 1, clr_black)
     self.animate_score = None
 
-  def reset(self, total_time=3):
-    self.rem_secs = total_time
+  def reset(self):
+    self.rem_secs = GAME_DURATION_SECS
     self.elapsed = 0
+    pygame.mixer.music.load('game_loop.wav')
+    pygame.mixer.music.play(-1)
 
   def draw(self):
     txt_score = fnt_default_300.render(str(game.score), 1, clr_neon_pink)
@@ -159,7 +162,11 @@ class MainDisplay(object):
     if self.elapsed > 1000:
       self.elapsed = 0
       self.rem_secs -= 1
+      if self.rem_secs == GAME_DURATION_SECS//3:
+        pygame.mixer.music.load('game_loop_hurry.wav')
+        pygame.mixer.music.play(-1)
       if self.rem_secs < 0:
+        pygame.mixer.music.stop()
         self.game.goto_drink()
 
   def handle_key(self, keycode):
