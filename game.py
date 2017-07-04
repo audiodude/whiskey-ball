@@ -37,6 +37,8 @@ fnt_default_200 = pygame.font.Font(None, 200)
 fnt_default_300 = pygame.font.Font(None, 300)
 fnt_default_400 = pygame.font.Font(None, 400)
 fnt_mono_200 = pygame.font.Font('DejaVuSansMono.ttf', 200)
+fnt_mono_120 = pygame.font.Font('DejaVuSansMono.ttf', 120)
+fnt_mono_100 = pygame.font.Font('DejaVuSansMono.ttf', 100)
 
 scoremap = json.load(open('scoremap.json'))
 scorekey_to_string = {
@@ -58,19 +60,6 @@ tier_to_coords = {
   4: (210, 220),
 }
 
-class HighScoreDisplay(object):
-  def __init__(self, game):
-    self.game = game
-
-  def draw(self):
-    pass
-
-  def update(self, tick):
-    pass
-
-  def handle_key(self, keycode):
-    pass
-
 class GameOverDisplay(object):
   def __init__(self, game):
     self.game = game
@@ -79,7 +68,7 @@ class GameOverDisplay(object):
     self.txt_game = fnt_default_400.render('GAME', 1, clr_neon_pink)
     self.txt_over = fnt_default_400.render('OVER', 1, clr_neon_pink)
     self.elapsed = 0
-    self.cycles = 0
+    self.total_time = 0
 
     self.colors = [clr_neon_blue, clr_neon_green, clr_neon_pink]
     self.top_idx = 0
@@ -94,10 +83,13 @@ class GameOverDisplay(object):
     screen.blit(self.bottom, (0, height//2))
 
   def update(self, tick):
+    self.total_time += tick
+    if self.total_time > 3000:
+      self.game.goto_high_scores()
+      return
     self.elapsed += tick
     if self.elapsed > 150:
       self.elapsed = 0
-      self.cycles += 1
       self.top_idx += 1
       self.bottom_idx += 1
       if self.top_idx > len(self.colors) - 1:
@@ -453,9 +445,74 @@ class EnterScoreDisplay(object):
         break
 
     scores.insert(idx, [name, game.score])
-    print(scores)
     json.dump(scores, open('scores.json', 'w'))
     self.game.goto_game_over()
+
+class HighScoresDisplay(object):
+  def __init__(self, game):
+    self.game = game
+    if os.path.isfile('scores.json'):
+      self.scores = json.load(open('scores.json'))
+    else:
+      # Skip showing the scores if there are none.
+      self.game.goto_game_over()
+      return
+    self.cur_top = None
+    self.elapsed = 0
+    self.total_elapsed = 0
+    self.show_top = True
+
+  def draw(self):
+    bg = pygame.Surface((width, height))
+
+    score_surfaces = []
+    total_height = 0
+    total_width = 0
+    for i, (name, score) in enumerate(self.scores):
+      score_str = str(score)
+      while len(score_str) < 4:
+        score_str = ' ' + score_str
+      if i < 3:
+        score_line = '%s %s' % (name, score_str)
+        if i == 0 and not self.show_top:
+          score_line = ' '
+        txt = fnt_mono_120.render(score_line, 1, clr_neon_blue)
+      else:
+        txt = fnt_mono_100.render(
+          '%s    %s' % (name, score_str), 1, clr_neon_blue)
+      score_surfaces.append(txt)
+      total_height += txt.get_height()
+      if txt.get_width() > total_width:
+        total_width = txt.get_width()
+
+    scroll = pygame.Surface((total_width, total_height))
+    scroll.fill(clr_neon_pink)
+    cur_height = 0
+    for txt in score_surfaces:
+      scroll.blit(txt, ((total_width - txt.get_width())/2, cur_height))
+      cur_height += txt.get_height()
+
+    bg.fill(clr_neon_pink)
+    if self.cur_top is None:
+      self.cur_top = height - total_height
+    bg.blit(scroll, ((width - total_width)//2, self.cur_top))
+    screen.blit(bg, (0, 0))
+
+  def update(self, tick):
+    if self.cur_top >= 0:
+      self.elapsed += tick
+      self.total_elapsed += tick
+      if self.elapsed > 80:
+        self.show_top = not self.show_top
+        self.elapsed = 0
+      if self.total_elapsed > 4000:
+        self.game.goto_game_over()
+        return
+    elif self.cur_top:
+      self.cur_top += 2
+
+  def handle_key(self, keycode):
+    pass
 
 class Game(object):
   def __init__(self):
@@ -479,6 +536,9 @@ class Game(object):
 
   def goto_game_over(self):
     self.current_state = GameOverDisplay(self)
+
+  def goto_high_scores(self):
+    self.current_state = HighScoresDisplay(self)
 
   def goto_drink(self):
     self.current_state = DrinkDisplay(self)
