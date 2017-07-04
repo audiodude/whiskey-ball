@@ -9,6 +9,7 @@
 # ESC  Quit at any time
 
 import json
+import os
 import sys
 
 import pygame
@@ -56,6 +57,19 @@ tier_to_coords = {
   3: (240, 220),
   4: (210, 220),
 }
+
+class HighScoreDisplay(object):
+  def __init__(self, game):
+    self.game = game
+
+  def draw(self):
+    pass
+
+  def update(self, tick):
+    pass
+
+  def handle_key(self, keycode):
+    pass
 
 class GameOverDisplay(object):
   def __init__(self, game):
@@ -428,7 +442,19 @@ class EnterScoreDisplay(object):
       self.initials.enter()
 
   def record_score(self, name):
-    print(name)
+    if os.path.isfile('scores.json'):
+      scores = json.load(open('scores.json'))
+    else:
+      scores = []
+    idx = len(scores)
+    for i, (_, score) in enumerate(scores):
+      if game.score > score:
+        idx = i
+        break
+
+    scores.insert(idx, [name, game.score])
+    print(scores)
+    json.dump(scores, open('scores.json', 'w'))
     self.game.goto_game_over()
 
 class Game(object):
