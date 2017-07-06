@@ -532,7 +532,6 @@ class HighScoresDisplay(object):
       self.elapsed = 0
       self.velocity += self.accel
 
-
   def handle_key(self, keycode):
     if keycode == pygame.K_SPACE:
       self.game.goto_main()
@@ -571,6 +570,16 @@ class Game(object):
 
 game = Game()
 
+mask = pygame.Surface((width, height))
+mask.fill(clr_white)
+for x in range(width):
+  if x % 3 == 0:
+    pygame.draw.line(mask, clr_black, (x, 0), (x, height))
+for y in range(height):
+  if y % 3 == 0:
+    pygame.draw.line(mask, clr_black, (0, y), (width, y))
+mask.set_colorkey(clr_white)
+
 while True:
   for event in pygame.event.get():
     if event.type == pygame.QUIT:
@@ -584,4 +593,5 @@ while True:
   screen.fill(clr_grey)
   game.update()
   game.draw()
+  screen.blit(mask, (0, 0))
   pygame.display.flip()
