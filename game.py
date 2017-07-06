@@ -62,6 +62,7 @@ tier_to_coords = {
 
 class GameOverDisplay(object):
   def __init__(self, game):
+    print('Init gameover')
     self.game = game
     self.top = pygame.Surface(half)
     self.bottom = pygame.Surface(half)
@@ -455,12 +456,16 @@ class HighScoresDisplay(object):
       self.scores = json.load(open('scores.json'))
     else:
       # Skip showing the scores if there are none.
-      self.game.goto_game_over()
-      return
+      self.scores = []
     self.cur_top = None
+    self.start_top = None
     self.elapsed = 0
     self.total_elapsed = 0
     self.show_top = True
+    self.distance = 0
+    self.velocity = 2
+    self.accel = 1
+    self.started_pos = False
 
   def draw(self):
     bg = pygame.Surface((width, height))
@@ -494,25 +499,43 @@ class HighScoresDisplay(object):
 
     bg.fill(clr_neon_pink)
     if self.cur_top is None:
-      self.cur_top = height - total_height
+      self.start_top = self.cur_top = height - total_height
+      mod = self.cur_top % 3
+      if mod != 0:
+        if self.cur_top < 0:
+          self.cur_top -= mod
+        else:
+          self.cur_top += mod
     bg.blit(scroll, ((width - total_width)//2, self.cur_top))
     screen.blit(bg, (0, 0))
 
   def update(self, tick):
-    if self.cur_top >= 0:
-      self.elapsed += tick
+    self.elapsed += tick
+    if len(self.scores) <= 0:
+      self.game.goto_game_over()
+      return
+    if ((self.cur_top <= 0 and self.start_top > 0) or 
+        (self.cur_top >= 0 and self.start_top < 0)):
       self.total_elapsed += tick
       if self.elapsed > 80:
         self.show_top = not self.show_top
         self.elapsed = 0
-      if self.total_elapsed > 4000:
+      if self.total_elapsed > 6000:
         self.game.goto_game_over()
         return
-    elif self.cur_top:
-      self.cur_top += 2
+    elif self.cur_top > 0:
+      self.cur_top -= self.velocity
+    elif self.cur_top < 0:
+      self.cur_top += self.velocity
+
+    if self.elapsed > 150:
+      self.elapsed = 0
+      self.velocity += self.accel
+
 
   def handle_key(self, keycode):
-    pass
+    if keycode == pygame.K_SPACE:
+      self.game.goto_main()
 
 class Game(object):
   def __init__(self):
