@@ -60,9 +60,39 @@ tier_to_coords = {
   4: (210, 220),
 }
 
+class TitleDisplay(object):
+  def __init__(self, game):
+    self.game = game
+    self.elapsed = 0
+    self.total_time = 0
+    self.surfaces = []
+    self.idx = 0
+    for i in range(50):
+      filename = 'title/title%02d.jpg' % i
+      s = pygame.image.load(filename)
+      self.surfaces.append(s.convert())
+
+  def draw(self):
+    screen.blit(self.surfaces[self.idx], (0, 0))
+
+  def update(self, tick):
+    self.elapsed += tick
+    self.total_time += tick
+    if self.total_time > 8000:
+      self.game.goto_high_scores()
+      return
+    if self.elapsed > 30:
+      self.elapsed = 0
+      self.idx += 1
+      if self.idx == len(self.surfaces):
+        self.idx = 0
+
+  def handle_key(self, keycode):
+    if keycode == pygame.K_SPACE:
+      self.game.goto_main()
+
 class GameOverDisplay(object):
   def __init__(self, game):
-    print('Init gameover')
     self.game = game
     self.top = pygame.Surface(half)
     self.bottom = pygame.Surface(half)
@@ -85,8 +115,8 @@ class GameOverDisplay(object):
 
   def update(self, tick):
     self.total_time += tick
-    if self.total_time > 3000:
-      self.game.goto_high_scores()
+    if self.total_time > 6000:
+      self.game.goto_title()
       return
     self.elapsed += tick
     if self.elapsed > 150:
@@ -558,6 +588,9 @@ class Game(object):
 
   def goto_game_over(self):
     self.current_state = GameOverDisplay(self)
+
+  def goto_title(self):
+    self.current_state = TitleDisplay(self)
 
   def goto_high_scores(self):
     self.current_state = HighScoresDisplay(self)
