@@ -18,8 +18,8 @@ pygame.init()
 screen = pygame.display.set_mode((0,0), pygame.FULLSCREEN)
 pygame.mouse.set_visible(False)
 
-GAME_DURATION_SECS = 3
-USE_MUSIC = False
+GAME_DURATION_SECS = 20
+USE_MUSIC = True
 
 width, height = 1024, 600
 half = width, height//2
@@ -60,20 +60,21 @@ tier_to_coords = {
   4: (210, 220),
 }
 
+title_surfaces = []
+for i in range(50):
+  filename = 'title/title%02d.jpg' % i
+  s = pygame.image.load(filename)
+  title_surfaces.append(s.convert())
+
 class TitleDisplay(object):
   def __init__(self, game):
     self.game = game
     self.elapsed = 0
     self.total_time = 0
-    self.surfaces = []
     self.idx = 0
-    for i in range(50):
-      filename = 'title/title%02d.jpg' % i
-      s = pygame.image.load(filename)
-      self.surfaces.append(s.convert())
 
   def draw(self):
-    screen.blit(self.surfaces[self.idx], (0, 0))
+    screen.blit(title_surfaces[self.idx], (0, 0))
 
   def update(self, tick):
     self.elapsed += tick
@@ -84,7 +85,7 @@ class TitleDisplay(object):
     if self.elapsed > 30:
       self.elapsed = 0
       self.idx += 1
-      if self.idx == len(self.surfaces):
+      if self.idx == len(title_surfaces):
         self.idx = 0
 
   def handle_key(self, keycode):
