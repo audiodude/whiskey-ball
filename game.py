@@ -110,8 +110,8 @@ class GameOverDisplay(object):
   def draw(self):
     self.top.fill(self.colors[self.top_idx])
     self.bottom.fill(self.colors[self.bottom_idx])
-    self.top.blit(self.txt_game, (80, 30))
-    self.bottom.blit(self.txt_over, (110, 30))
+    self.top.blit(self.txt_game, (80, 10))
+    self.bottom.blit(self.txt_over, (110, 10))
     screen.blit(self.top, (0, 0))
     screen.blit(self.bottom, (0, height//2))
 
