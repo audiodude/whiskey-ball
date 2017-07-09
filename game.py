@@ -18,7 +18,7 @@ pygame.init()
 screen = pygame.display.set_mode((0,0), pygame.FULLSCREEN)
 pygame.mouse.set_visible(False)
 
-GAME_DURATION_SECS = 20
+GAME_DURATION_SECS = 60
 USE_MUSIC = True
 
 width, height = 1024, 600
@@ -351,6 +351,7 @@ class DrinkDisplay(object):
     self.current_tier = self.next_tier
 
   def pour_drink(self):
+    # TODO: Pour the drink
     self.game.goto_enter_score()
 
 class Initials(object):
