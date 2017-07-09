@@ -35,6 +35,7 @@ fnt_default_100 = pygame.font.Font(None, 100)
 fnt_default_160 = pygame.font.Font(None, 160)
 fnt_default_200 = pygame.font.Font(None, 200)
 fnt_default_300 = pygame.font.Font(None, 300)
+fnt_default_280 = pygame.font.Font(None, 280)
 fnt_default_400 = pygame.font.Font(None, 400)
 fnt_mono_200 = pygame.font.Font('DejaVuSansMono.ttf', 200)
 fnt_mono_120 = pygame.font.Font('DejaVuSansMono.ttf', 120)
@@ -154,12 +155,12 @@ class ScoreAnimation(object):
       self.surface.fill(self.fill_color)
 
   def update(self, tick):
-    if self.cycles >= 10:
+    if self.cycles >= 18:
       self.showing = False
       return
 
     self.elapsed += tick
-    if (self.cycles > 1 and self.elapsed > 100) or self.elapsed > 500:
+    if (self.cycles >= 1 and self.elapsed > 50) or self.elapsed > 600:
       self.elapsed = 0
       self.cycles += 1
       self.showing = not self.showing
@@ -169,8 +170,8 @@ class MainDisplay(object):
     self.game = game
     self.top = pygame.Surface(half)
     self.bottom = pygame.Surface(half)
-    self.txt_score_header = fnt_default_200.render('score:', 1, clr_neon_pink)
-    self.txt_time_header = fnt_default_200.render('time:', 1, clr_black)
+    self.txt_score_header = fnt_default_200.render('SCORE:', 1, clr_neon_pink)
+    self.txt_time_header = fnt_default_200.render('TIME:', 1, clr_black)
     self.animate_score = None
 
     self.rem_secs = GAME_DURATION_SECS
@@ -180,18 +181,18 @@ class MainDisplay(object):
       pygame.mixer.music.play(-1)
 
   def draw(self):
-    txt_score = fnt_default_300.render(str(game.score), 1, clr_neon_pink)
-    txt_time = fnt_default_300.render(str(self.rem_secs), 1, clr_black)
+    txt_score = fnt_default_280.render(str(game.score), 1, clr_neon_pink)
+    txt_time = fnt_default_280.render(str(self.rem_secs), 1, clr_black)
     self.top.fill(clr_neon_blue)
     if self.animate_score:
       self.animate_score.draw()
     else:
       self.bottom.fill(clr_black)
 
-    self.top.blit(self.txt_score_header, (10, 0))
-    self.top.blit(self.txt_time_header, (640, 0))
-    self.top.blit(txt_score, (40, 120))
-    self.top.blit(txt_time, (680, 120))
+    self.top.blit(self.txt_score_header, (10, -5))
+    self.top.blit(self.txt_time_header, (640, -5))
+    self.top.blit(txt_score, (40, 110))
+    self.top.blit(txt_time, (680, 110))
     screen.blit(self.top, (0, 0))
     screen.blit(self.bottom, (0, height//2))
 
@@ -607,11 +608,8 @@ game = Game()
 
 mask = pygame.Surface((width, height))
 mask.fill(clr_white)
-for x in range(width):
-  if x % 3 == 0:
-    pygame.draw.line(mask, clr_black, (x, 0), (x, height))
 for y in range(height):
-  if y % 3 == 0:
+  if y % 5 == 0:
     pygame.draw.line(mask, clr_black, (0, y), (width, y))
 mask.set_colorkey(clr_white)
 
