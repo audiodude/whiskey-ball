@@ -1,0 +1,11 @@
+{
+  "drinks": [
+    "Participation Punch",
+    "Old Fashioned",
+    "Godfather",
+    "Manhattan"
+  ],
+  "tiers": [
+    0, 80, 160, 240
+  ]
+}
