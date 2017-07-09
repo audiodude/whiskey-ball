@@ -18,8 +18,8 @@ pygame.init()
 screen = pygame.display.set_mode((0,0), pygame.FULLSCREEN)
 pygame.mouse.set_visible(False)
 
-GAME_DURATION_SECS = 20
-USE_MUSIC = True
+GAME_DURATION_SECS = 3
+USE_MUSIC = False
 
 width, height = 1024, 600
 half = width, height//2
@@ -32,6 +32,7 @@ clr_neon_blue = pygame.Color('#BBFFFF')
 clr_neon_pink = pygame.Color('#FF69B4')
 clr_neon_green = pygame.Color('#9AFF87')
 fnt_default_100 = pygame.font.Font(None, 100)
+fnt_default_140 = pygame.font.Font(None, 140)
 fnt_default_160 = pygame.font.Font(None, 160)
 fnt_default_200 = pygame.font.Font(None, 200)
 fnt_default_300 = pygame.font.Font(None, 300)
@@ -222,6 +223,70 @@ class MainDisplay(object):
         self.animate_score.draw()
       self.animate_score = ScoreAnimation(self.bottom, plus_score)
 
+class PlayerSelect(object):
+  def __init__(self, game):
+    self.game = game
+    self.elapsed = 0
+    self.top = pygame.Surface(quarter)
+    self.bottom = pygame.Surface(three_quarters)
+    self.selection_showing = True
+    self.left_arrow = Arrow('<', self)
+    self.right_arrow = Arrow('>', self)
+    self.focus = 'left'
+    self.players = 1
+
+  def draw(self):
+    self.top.fill(clr_black)
+    self.bottom.fill(clr_neon_green)
+    txt_score = fnt_default_140.render('How many players?', 1, clr_white)
+    self.top.blit(txt_score, (50, 20))
+
+    self.left_arrow.draw(self.bottom, (10, 150))
+    self.right_arrow.draw(self.bottom, (900, 150))
+
+    if self.selection_showing:
+      coords = (210, 220)
+      players_text = '%s players' % self.players
+      if self.players == 1:
+        coords = (240, 220)
+        players_text = '1 player'
+      txt_player = fnt_default_200.render(players_text, 1, clr_neon_pink)
+      self.bottom.blit(txt_player, coords)
+
+    screen.blit(self.top, (0, 0))
+    screen.blit(self.bottom, (0, height//4))
+
+  def update(self, tick):
+    self.left_arrow.update(tick)
+    self.right_arrow.update(tick)
+    self.elapsed += tick
+    if self.elapsed > 150:
+      self.elapsed = 0
+      self.selection_showing = not self.selection_showing
+
+  def handle_key(self, keycode):
+    if keycode == pygame.K_COMMA:
+      self.dec_players()
+    elif keycode == pygame.K_PERIOD:
+      self.inc_players()
+    elif keycode == pygame.K_SPACE:
+      self.game.start_game(self.players)
+
+  def dec_players(self):
+    self.left_arrow.animating = True
+    self.next_players = self.players - 1
+    if self.next_players == 0:
+      self.next_players = 4
+
+  def inc_players(self):
+    self.right_arrow.animating = True
+    self.next_players = self.players + 1
+    if self.next_players == 5:
+      self.next_players = 1
+
+  def animation_done(self):
+    self.players = self.next_players
+
 class Arrow(object):
   def __init__(self, text, state):
     self.text = text
@@ -248,11 +313,12 @@ class Arrow(object):
         self.cycles = 0
         self.active = False
         self.animating = False
-        self.state.update_tier()
+        self.state.animation_done()
 
 class DrinkDisplay(object):
-  def __init__(self, game):
+  def __init__(self, game, display_player=None):
     self.game = game
+    self.display_player = display_player
     self.elapsed = 0
     self.top = pygame.Surface(quarter)
     self.bottom = pygame.Surface(three_quarters)
@@ -281,8 +347,10 @@ class DrinkDisplay(object):
   def draw(self):
     self.top.fill(clr_black)
     self.bottom.fill(clr_neon_blue)
-    txt_score = fnt_default_160.render(
-      'Your score: %s' % self.game.score, 1, clr_white)
+    score_string = 'Your score: %s' % self.game.score
+    if self.display_player:
+      score_string = 'Player %s: %s' % (self.display_player, self.game.score)
+    txt_score = fnt_default_160.render(score_string, 1, clr_white)
     self.top.blit(txt_score, (110, 20))
 
     self.left_arrow.draw(self.bottom, (10, 150))
@@ -347,7 +415,7 @@ class DrinkDisplay(object):
       next_tier_idx = 0
     self.next_tier = self.tiers[next_tier_idx]
 
-  def update_tier(self):
+  def animation_done(self):
     self.current_tier = self.next_tier
 
   def pour_drink(self):
@@ -572,6 +640,7 @@ class Game(object):
     self.clock = pygame.time.Clock()
     self.current_state = GameOverDisplay(self)
     self.score = 0
+    self.scores = []
 
   def handle_key(self, keycode):
     self.current_state.handle_key(keycode)
@@ -583,9 +652,14 @@ class Game(object):
     tick = self.clock.tick(30)
     result = self.current_state.update(tick)
 
-  def goto_main(self):
+  def start_game(self, players=1):
     self.score = 0
+    self.players_rem = players
+    self.scores = []
     self.current_state = MainDisplay(self)
+
+  def goto_main(self):
+    self.current_state = PlayerSelect(self)
 
   def goto_game_over(self):
     self.current_state = GameOverDisplay(self)
@@ -597,7 +671,12 @@ class Game(object):
     self.current_state = HighScoresDisplay(self)
 
   def goto_drink(self):
-    self.current_state = DrinkDisplay(self)
+    self.scores.append(self.score)
+    self.players_rem -= 1
+    cur_player = None
+    if self.players_rem > 0:
+      cur_player = len(self.scores)
+    self.current_state = DrinkDisplay(self, display_player=cur_player)
 
   def goto_enter_score(self):
     self.current_state = EnterScoreDisplay(self)
