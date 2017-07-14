@@ -21,6 +21,9 @@ pygame.mouse.set_visible(False)
 GAME_DURATION_SECS = 3
 USE_MUSIC = False
 
+ARCADE_FONT_NAME = 'Gameplay.ttf'
+MONO_FONT_NAME = 'DejaVuSansMono.ttf'
+
 width, height = 1024, 600
 half = width, height//2
 quarter = width, height//4
@@ -31,15 +34,15 @@ clr_white = pygame.Color('#FFFFFF')
 clr_neon_blue = pygame.Color('#BBFFFF')
 clr_neon_pink = pygame.Color('#FF69B4')
 clr_neon_green = pygame.Color('#9AFF87')
-fnt_default_100 = pygame.font.Font(None, 100)
-fnt_default_140 = pygame.font.Font(None, 140)
-fnt_default_160 = pygame.font.Font(None, 160)
-fnt_default_200 = pygame.font.Font(None, 200)
-fnt_default_300 = pygame.font.Font(None, 300)
-fnt_default_400 = pygame.font.Font(None, 400)
-fnt_mono_200 = pygame.font.Font('DejaVuSansMono.ttf', 200)
-fnt_mono_120 = pygame.font.Font('DejaVuSansMono.ttf', 120)
-fnt_mono_100 = pygame.font.Font('DejaVuSansMono.ttf', 100)
+fnt_arcade_50 = pygame.font.Font(ARCADE_FONT_NAME, 50)
+fnt_arcade_80 = pygame.font.Font(ARCADE_FONT_NAME, 80)
+fnt_arcade_150 = pygame.font.Font(ARCADE_FONT_NAME, 150)
+fnt_arcade_100 = pygame.font.Font(ARCADE_FONT_NAME, 100)
+fnt_arcade_140 = pygame.font.Font(ARCADE_FONT_NAME, 140)
+fnt_arcade_260 = pygame.font.Font(ARCADE_FONT_NAME, 260)
+fnt_mono_200 = pygame.font.Font(MONO_FONT_NAME, 200)
+fnt_mono_120 = pygame.font.Font(MONO_FONT_NAME, 120)
+fnt_mono_100 = pygame.font.Font(MONO_FONT_NAME, 100)
 
 scoremap = json.load(open('scoremap.json'))
 scorekey_to_string = {
@@ -98,8 +101,8 @@ class GameOverDisplay(object):
     self.game = game
     self.top = pygame.Surface(half)
     self.bottom = pygame.Surface(half)
-    self.txt_game = fnt_default_400.render('GAME', 1, clr_neon_pink)
-    self.txt_over = fnt_default_400.render('OVER', 1, clr_neon_pink)
+    self.txt_game = fnt_arcade_260.render('GAME', 1, clr_neon_pink)
+    self.txt_over = fnt_arcade_260.render('OVER', 1, clr_neon_pink)
     self.elapsed = 0
     self.total_time = 0
 
@@ -110,8 +113,12 @@ class GameOverDisplay(object):
   def draw(self):
     self.top.fill(self.colors[self.top_idx])
     self.bottom.fill(self.colors[self.bottom_idx])
-    self.top.blit(self.txt_game, (80, 30))
-    self.bottom.blit(self.txt_over, (110, 30))
+    game_x = (width - self.txt_game.get_width()) // 2
+    game_y = (height//2 - self.txt_game.get_height()) // 2
+    self.top.blit(self.txt_game, (game_x, game_y))
+    over_x = (width - self.txt_over.get_width()) // 2
+    over_y = (height//2 - self.txt_over.get_height()) // 2
+    self.bottom.blit(self.txt_over, (over_x, over_y))
     screen.blit(self.top, (0, 0))
     screen.blit(self.bottom, (0, height//2))
 
@@ -146,21 +153,20 @@ class ScoreAnimation(object):
   def draw(self):
     if self.showing:
       score_str = str(self.score)
-      x = 340
-      if len(score_str) == 3:
-        x = 260
-      txt_scored = fnt_default_400.render(score_str, 1, clr_neon_green)
-      self.surface.blit(txt_scored, (x, 20))
+      txt_scored = fnt_arcade_260.render(score_str, 1, clr_neon_green)
+      score_x = (width - txt_scored.get_width()) // 2
+      score_y = (height // 2 - txt_scored.get_height()) // 2
+      self.surface.blit(txt_scored, (score_x, score_y))
     else:
       self.surface.fill(self.fill_color)
 
   def update(self, tick):
-    if self.cycles >= 10:
+    if self.cycles >= 18:
       self.showing = False
       return
 
     self.elapsed += tick
-    if (self.cycles > 1 and self.elapsed > 100) or self.elapsed > 500:
+    if (self.cycles >= 1 and self.elapsed > 50) or self.elapsed > 600:
       self.elapsed = 0
       self.cycles += 1
       self.showing = not self.showing
@@ -170,8 +176,8 @@ class MainDisplay(object):
     self.game = game
     self.top = pygame.Surface(half)
     self.bottom = pygame.Surface(half)
-    self.txt_score_header = fnt_default_200.render('score:', 1, clr_neon_pink)
-    self.txt_time_header = fnt_default_200.render('time:', 1, clr_black)
+    self.txt_score_header = fnt_arcade_100.render('SCORE:', 1, clr_neon_pink)
+    self.txt_time_header = fnt_arcade_100.render('TIME:', 1, clr_black)
     self.animate_score = None
 
     self.rem_secs = GAME_DURATION_SECS
@@ -181,18 +187,18 @@ class MainDisplay(object):
       pygame.mixer.music.play(-1)
 
   def draw(self):
-    txt_score = fnt_default_300.render(str(game.score), 1, clr_neon_pink)
-    txt_time = fnt_default_300.render(str(self.rem_secs), 1, clr_black)
+    txt_score = fnt_arcade_140.render(str(game.score), 1, clr_neon_pink)
+    txt_time = fnt_arcade_140.render(str(self.rem_secs), 1, clr_black)
     self.top.fill(clr_neon_blue)
     if self.animate_score:
       self.animate_score.draw()
     else:
       self.bottom.fill(clr_black)
 
-    self.top.blit(self.txt_score_header, (10, 0))
-    self.top.blit(self.txt_time_header, (640, 0))
-    self.top.blit(txt_score, (40, 120))
-    self.top.blit(txt_time, (680, 120))
+    self.top.blit(self.txt_score_header, (10, -5))
+    self.top.blit(self.txt_time_header, (640, -5))
+    self.top.blit(txt_score, (40, 110))
+    self.top.blit(txt_time, (680, 110))
     screen.blit(self.top, (0, 0))
     screen.blit(self.bottom, (0, height//2))
 
@@ -298,7 +304,7 @@ class Arrow(object):
 
   def draw(self, surface, coords):
     color = clr_neon_pink if self.active else clr_black
-    txt = fnt_default_300.render(self.text, 1, color)
+    txt = fnt_mono_200.render(self.text, 1, color)
     surface.blit(txt, coords)
 
   def update(self, tick):
@@ -316,6 +322,8 @@ class Arrow(object):
         self.state.animation_done()
 
 class DrinkDisplay(object):
+  NAME_OFFSET_Y = 40
+
   def __init__(self, game, display_player=None):
     self.game = game
     self.display_player = display_player
@@ -350,8 +358,9 @@ class DrinkDisplay(object):
     score_string = 'Your score: %s' % self.game.score
     if self.display_player:
       score_string = 'Player %s: %s' % (self.display_player, self.game.score)
-    txt_score = fnt_default_160.render(score_string, 1, clr_white)
-    self.top.blit(txt_score, (110, 20))
+    txt_score = fnt_arcade_80.render(score_string, 1, clr_white)
+    score_x = (width - txt_score.get_width()) // 2
+    self.top.blit(txt_score, (score_x, 20))
 
     self.left_arrow.draw(self.bottom, (10, 150))
     self.right_arrow.draw(self.bottom, (900, 150))
@@ -360,27 +369,36 @@ class DrinkDisplay(object):
     while len(pts_string) < 3:
       pts_string = ' ' + pts_string
     tier_string = 'Tier %s: %s pts' % (self.current_tier['tier'], pts_string)
-    txt_tier = fnt_default_160.render(tier_string, 1, clr_black)
-    self.bottom.blit(txt_tier, (110, 10))
+    txt_tier = fnt_arcade_80.render(tier_string, 1, clr_black)
+    self.bottom.blit(txt_tier, (score_x, 10))
 
     drink_color = clr_black if self.current_tier['locked'] else clr_neon_pink
     if self.current_tier['locked'] or self.drink_showing:
       if self.current_tier['tier'] == 1:
-        txt_drink_1 = fnt_default_160.render(
+        txt_drink_1 = fnt_arcade_80.render(
           self.current_tier['drink'].split(' ')[0], 1, drink_color)
-        txt_drink_2 = fnt_default_160.render(
+        txt_drink_2 = fnt_arcade_80.render(
           self.current_tier['drink'].split(' ')[1], 1, drink_color)
-        self.bottom.blit(txt_drink_1, (160, 140))
-        self.bottom.blit(txt_drink_2, (350, 280))
+        drink_1_x = (width - txt_drink_1.get_width()) // 2
+        drink_2_x = (width - txt_drink_2.get_width()) // 2
+        drink_1_y = ((height * 3 // 4 - txt_drink_1.get_height()) // 2 +
+                     self.NAME_OFFSET_Y // 2)
+        drink_2_y = drink_1_y + txt_drink_1.get_height() + 5
+        self.bottom.blit(txt_drink_1, (drink_1_x, drink_1_y))
+        self.bottom.blit(txt_drink_2, (drink_2_x, drink_2_y))
       else:
-        coords = tier_to_coords[self.current_tier['tier']]
-        txt_drink = fnt_default_160.render(
+        txt_drink = fnt_arcade_80.render(
           self.current_tier['drink'], 1, drink_color)
-        self.bottom.blit(txt_drink, coords)
+        drink_x = (width - txt_drink.get_width()) // 2
+        drink_y = ((height * 3 // 4 - txt_drink.get_height()) // 2 +
+                   self.NAME_OFFSET_Y)
+        self.bottom.blit(txt_drink, (drink_x, drink_y))
 
     if self.current_tier['locked'] and self.drink_showing:
-      txt_locked = fnt_default_100.render('[LOCKED]', 1, clr_neon_pink)
-      self.bottom.blit(txt_locked, (340, 360))
+      txt_locked = fnt_arcade_50.render('-LOCKED-', 1, clr_neon_pink)
+      locked_x = (width - txt_locked.get_width()) // 2
+      locked_y = (height * 3 // 4 - txt_locked.get_height() - 20)
+      self.bottom.blit(txt_locked, (locked_x, locked_y))
 
     screen.blit(self.top, (0, 0))
     screen.blit(self.bottom, (0, height//4))
@@ -419,6 +437,7 @@ class DrinkDisplay(object):
     self.current_tier = self.next_tier
 
   def pour_drink(self):
+    # TODO: Pour the drink
     self.game.goto_enter_score()
 
 class Initials(object):
@@ -427,8 +446,8 @@ class Initials(object):
   checkmark = '✓'
   alphabet = [
     'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O',
-    'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '!', '@', '#', '$',
-    '&', '*', '(', ')', space, delete,
+    'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '!', '@', '#', '-',
+    '$', '&', '*', '(', ')', space, delete,
   ]
   last_spot = [checkmark, delete]
 
@@ -508,13 +527,15 @@ class EnterScoreDisplay(object):
     self.top.fill(clr_black)
     self.middle.fill(clr_neon_green)
     self.bottom.fill(clr_neon_green)
-    txt_score = fnt_default_160.render(
+    txt_score = fnt_arcade_80.render(
       'Your score: %s' % self.game.score, 1, clr_white)
-    self.top.blit(txt_score, (110, 20))
+    score_x = (width - txt_score.get_width()) // 2
+    self.top.blit(txt_score, (score_x, 20))
 
-    txt_enter = fnt_default_160.render(
+    txt_enter = fnt_arcade_80.render(
       'Enter your initials', 1, clr_black)
-    self.middle.blit(txt_enter, (20, 20))
+    enter_x = (width - txt_enter.get_width()) // 2
+    self.middle.blit(txt_enter, (enter_x, 20))
 
     self.initials.draw(self.bottom)
 
@@ -685,11 +706,8 @@ game = Game()
 
 mask = pygame.Surface((width, height))
 mask.fill(clr_white)
-for x in range(width):
-  if x % 3 == 0:
-    pygame.draw.line(mask, clr_black, (x, 0), (x, height))
 for y in range(height):
-  if y % 3 == 0:
+  if y % 5 == 0:
     pygame.draw.line(mask, clr_black, (0, y), (width, y))
 mask.set_colorkey(clr_white)
 
