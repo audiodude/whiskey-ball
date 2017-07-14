@@ -684,13 +684,13 @@ class HighScoresDisplay(object):
       while len(score_str) < 4:
         score_str = ' ' + score_str
       if i < 3:
-        score_line = '%s %s' % (name, score_str)
+        score_line = '%s. %s %s' % (i+1, name, score_str)
         if i == 0 and not self.show_top:
           score_line = ' '
         txt = fnt_mono_120.render(score_line, 1, clr_neon_blue)
       else:
         txt = fnt_mono_100.render(
-          '%s    %s' % (name, score_str), 1, clr_neon_blue)
+          '%s. %s %s' % (i+1, name, score_str), 1, clr_neon_blue)
       score_surfaces.append(txt)
       total_height += txt.get_height()
       if txt.get_width() > total_width:
