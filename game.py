@@ -34,6 +34,7 @@ clr_white = pygame.Color('#FFFFFF')
 clr_neon_blue = pygame.Color('#BBFFFF')
 clr_neon_pink = pygame.Color('#FF69B4')
 clr_neon_green = pygame.Color('#9AFF87')
+clr_neon_yellow = pygame.Color('#F3F360')
 fnt_arcade_50 = pygame.font.Font(ARCADE_FONT_NAME, 50)
 fnt_arcade_80 = pygame.font.Font(ARCADE_FONT_NAME, 80)
 fnt_arcade_150 = pygame.font.Font(ARCADE_FONT_NAME, 150)
@@ -244,7 +245,7 @@ class PlayerSelect(object):
 
   def draw(self):
     self.top.fill(clr_black)
-    self.bottom.fill(clr_neon_green)
+    self.bottom.fill(clr_neon_yellow)
     txt_many = fnt_arcade_80.render('How many players?', 1, clr_white)
     many_x = (width - txt_many.get_width()) // 2
     many_y = (height // 4 - txt_many.get_height()) // 2
@@ -575,7 +576,84 @@ class EnterScoreDisplay(object):
 
     scores.insert(idx, [name, game.score])
     json.dump(scores, open('scores.json', 'w'))
+    self.game.set_cur_player_initials(name)
     self.game.next_cycle()
+
+class WinnerDisplay(object):
+  def __init__(self, game):
+    self.game = game
+    self.elapsed = 0
+    self.top = pygame.Surface(quarter)
+    self.bottoms = []
+    for i in range(4):
+      self.bottoms.append(pygame.Surface((width // 2, height * 3 // 8)))
+    self.showing = True
+
+  def draw(self):
+    self.top.fill(clr_black)
+
+    winner_string = self.get_winners()
+    if len(winner_string) > 20:
+      txt_winner = fnt_arcade_50.render(winner_string, 1, clr_white)
+    else:
+      txt_winner = fnt_arcade_80.render(winner_string, 1, clr_white)
+    winner_x = (width - txt_winner.get_width()) // 2
+    winner_y = (height // 4 - txt_winner.get_height()) // 2
+    self.top.blit(txt_winner, (winner_x, winner_y))
+
+    coords = (
+      (0, self.top.get_height()),
+      (width // 2, self.top.get_height()),
+      (0, (height + self.top.get_height()) // 2),
+      (width // 2, (height + self.top.get_height()) // 2)
+    )
+    for i, (disp, coord) in enumerate(zip(self.bottoms, coords)):
+      disp.fill(clr_neon_yellow)
+      if i < self.game.total_players:
+        color = clr_black
+        if i + 1 in self.winning_players:
+          color = clr_neon_pink
+
+        if i + 1 not in self.winning_players or self.showing:
+          txt_initials = fnt_arcade_80.render(self.game.scores[i][1], 1, color)
+          initials_x = (disp.get_width() - txt_initials.get_width()) // 2
+          initials_y = (disp.get_height() - txt_initials.get_height() * 2) // 2
+          disp.blit(txt_initials, (initials_x, initials_y))
+          txt_score = fnt_arcade_80.render(
+            str(self.game.scores[i][0]), 1, color)
+          score_x = (disp.get_width() - txt_score.get_width()) // 2
+          score_y = initials_y + txt_initials.get_height()
+          disp.blit(txt_score, (score_x, score_y))
+      screen.blit(disp, coord)
+    screen.blit(self.top, (0,0))
+
+  def update(self, tick):
+    self.elapsed += tick
+    if self.elapsed > 50:
+      self.elapsed = 0
+      self.showing = not self.showing
+
+
+  def handle_key(self, keycode):
+    if keycode == pygame.K_SPACE:
+      self.game.goto_game_over()
+
+  def get_winners(self):
+    winning_players = []
+    winning_score = -1
+    for i, score in enumerate(self.game.scores):
+      if score[0] > winning_score:
+        winning_players = [i + 1]
+        winning_score = score[0]
+      elif score[0] == winning_score:
+        winning_players.append(i + 1)
+    self.winning_players = winning_players
+
+    if len(winning_players) > 1:
+      return 'Players %s and %s tie!' % (
+        ', '.join(str(s) for s in winning_players[0:-1]), winning_players[-1])
+    else:
+      return 'Player %s wins!' % winning_players[0]
 
 class HighScoresDisplay(object):
   def __init__(self, game):
@@ -689,8 +767,12 @@ class Game(object):
     self.current_state = MainDisplay(self)
 
   def next_cycle(self):
-    if self._get_cur_player() == self.total_players:
-      self.goto_game_over()
+    cur_player = self._get_cur_player()
+    if cur_player == self.total_players:
+      if cur_player != 1:
+        self.goto_winner_display()
+      else:
+        self.goto_game_over()
     else:
       self.score = 0
       self.current_state = MainDisplay(self)
@@ -708,13 +790,19 @@ class Game(object):
     self.current_state = HighScoresDisplay(self)
 
   def goto_drink(self):
-    self.scores.append(self.score)
+    self.scores.append([self.score])
     self.current_state = DrinkDisplay(
       self, display_player=self._get_cur_player())
 
   def goto_enter_score(self):
     self.current_state = EnterScoreDisplay(
       self, display_player=self._get_cur_player())
+
+  def goto_winner_display(self):
+    self.current_state = WinnerDisplay(self)
+
+  def set_cur_player_initials(self, initials):
+    self.scores[self._get_cur_player() - 1].append(initials)
 
   def _get_cur_player(self):
     if self.total_players > 1:
