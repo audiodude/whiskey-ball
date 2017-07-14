@@ -43,6 +43,7 @@ fnt_arcade_260 = pygame.font.Font(ARCADE_FONT_NAME, 260)
 fnt_mono_200 = pygame.font.Font(MONO_FONT_NAME, 200)
 fnt_mono_120 = pygame.font.Font(MONO_FONT_NAME, 120)
 fnt_mono_100 = pygame.font.Font(MONO_FONT_NAME, 100)
+NAME_OFFSET_Y = 40
 
 scoremap = json.load(open('scoremap.json'))
 scorekey_to_string = {
@@ -244,20 +245,23 @@ class PlayerSelect(object):
   def draw(self):
     self.top.fill(clr_black)
     self.bottom.fill(clr_neon_green)
-    txt_score = fnt_default_140.render('How many players?', 1, clr_white)
-    self.top.blit(txt_score, (50, 20))
+    txt_many = fnt_arcade_80.render('How many players?', 1, clr_white)
+    many_x = (width - txt_many.get_width()) // 2
+    many_y = (height // 4 - txt_many.get_height()) // 2
+    self.top.blit(txt_many, (many_x, many_y))
 
     self.left_arrow.draw(self.bottom, (10, 150))
     self.right_arrow.draw(self.bottom, (900, 150))
 
     if self.selection_showing:
-      coords = (210, 220)
-      players_text = '%s players' % self.players
+      players_string = '%s players' % self.players
       if self.players == 1:
-        coords = (240, 220)
-        players_text = '1 player'
-      txt_player = fnt_default_200.render(players_text, 1, clr_neon_pink)
-      self.bottom.blit(txt_player, coords)
+        players_string = '1 player'
+      txt_players = fnt_arcade_100.render(players_string, 1, clr_neon_pink)
+      players_x = (width - txt_players.get_width()) // 2
+      players_y = ((height * 3 // 4 - txt_players.get_height()) // 2 +
+                   NAME_OFFSET_Y // 2)
+      self.bottom.blit(txt_players, (players_x, players_y))
 
     screen.blit(self.top, (0, 0))
     screen.blit(self.bottom, (0, height//4))
@@ -322,8 +326,6 @@ class Arrow(object):
         self.state.animation_done()
 
 class DrinkDisplay(object):
-  NAME_OFFSET_Y = 40
-
   def __init__(self, game, display_player=None):
     self.game = game
     self.display_player = display_player
@@ -355,9 +357,10 @@ class DrinkDisplay(object):
   def draw(self):
     self.top.fill(clr_black)
     self.bottom.fill(clr_neon_blue)
-    score_string = 'Your score: %s' % self.game.score
+    score_string = 'Score: %s pts' % self.game.score
     if self.display_player:
-      score_string = 'Player %s: %s' % (self.display_player, self.game.score)
+      score_string = 'Player %s: %s pts' % (
+        self.display_player, self.game.score)
     txt_score = fnt_arcade_80.render(score_string, 1, clr_white)
     score_x = (width - txt_score.get_width()) // 2
     self.top.blit(txt_score, (score_x, 20))
@@ -382,7 +385,7 @@ class DrinkDisplay(object):
         drink_1_x = (width - txt_drink_1.get_width()) // 2
         drink_2_x = (width - txt_drink_2.get_width()) // 2
         drink_1_y = ((height * 3 // 4 - txt_drink_1.get_height()) // 2 +
-                     self.NAME_OFFSET_Y // 2)
+                     NAME_OFFSET_Y // 2)
         drink_2_y = drink_1_y + txt_drink_1.get_height() + 5
         self.bottom.blit(txt_drink_1, (drink_1_x, drink_1_y))
         self.bottom.blit(txt_drink_2, (drink_2_x, drink_2_y))
@@ -391,7 +394,7 @@ class DrinkDisplay(object):
           self.current_tier['drink'], 1, drink_color)
         drink_x = (width - txt_drink.get_width()) // 2
         drink_y = ((height * 3 // 4 - txt_drink.get_height()) // 2 +
-                   self.NAME_OFFSET_Y)
+                   NAME_OFFSET_Y)
         self.bottom.blit(txt_drink, (drink_x, drink_y))
 
     if self.current_tier['locked'] and self.drink_showing:
@@ -515,8 +518,9 @@ class Initials(object):
       self.ltr_indices[self.top_idx] = 0
 
 class EnterScoreDisplay(object):
-  def __init__(self, game):
+  def __init__(self, game, display_player=None):
     self.game = game
+    self.display_player = display_player
     self.elapsed = 0
     self.top = pygame.Surface(quarter)
     self.middle = pygame.Surface(quarter)
@@ -527,8 +531,12 @@ class EnterScoreDisplay(object):
     self.top.fill(clr_black)
     self.middle.fill(clr_neon_green)
     self.bottom.fill(clr_neon_green)
-    txt_score = fnt_arcade_80.render(
-      'Your score: %s' % self.game.score, 1, clr_white)
+
+    score_string = 'Score: %s pts' % self.game.score
+    if self.display_player:
+      score_string = 'Player %s: %s pts' % (
+        self.display_player, self.game.score)
+    txt_score = fnt_arcade_80.render(score_string, 1, clr_white)
     score_x = (width - txt_score.get_width()) // 2
     self.top.blit(txt_score, (score_x, 20))
 
@@ -567,7 +575,7 @@ class EnterScoreDisplay(object):
 
     scores.insert(idx, [name, game.score])
     json.dump(scores, open('scores.json', 'w'))
-    self.game.goto_game_over()
+    self.game.next_cycle()
 
 class HighScoresDisplay(object):
   def __init__(self, game):
@@ -662,6 +670,7 @@ class Game(object):
     self.current_state = GameOverDisplay(self)
     self.score = 0
     self.scores = []
+    self.total_players = 1
 
   def handle_key(self, keycode):
     self.current_state.handle_key(keycode)
@@ -675,9 +684,16 @@ class Game(object):
 
   def start_game(self, players=1):
     self.score = 0
-    self.players_rem = players
+    self.total_players = players
     self.scores = []
     self.current_state = MainDisplay(self)
+
+  def next_cycle(self):
+    if self._get_cur_player() == self.total_players:
+      self.goto_game_over()
+    else:
+      self.score = 0
+      self.current_state = MainDisplay(self)
 
   def goto_main(self):
     self.current_state = PlayerSelect(self)
@@ -693,14 +709,17 @@ class Game(object):
 
   def goto_drink(self):
     self.scores.append(self.score)
-    self.players_rem -= 1
-    cur_player = None
-    if self.players_rem > 0:
-      cur_player = len(self.scores)
-    self.current_state = DrinkDisplay(self, display_player=cur_player)
+    self.current_state = DrinkDisplay(
+      self, display_player=self._get_cur_player())
 
   def goto_enter_score(self):
-    self.current_state = EnterScoreDisplay(self)
+    self.current_state = EnterScoreDisplay(
+      self, display_player=self._get_cur_player())
+
+  def _get_cur_player(self):
+    if self.total_players > 1:
+      return len(self.scores)
+    return 1
 
 game = Game()
 
