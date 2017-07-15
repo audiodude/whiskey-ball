@@ -853,6 +853,9 @@ class PleaseWaitDisplay(object):
       if not robot.is_pouring_drink():
         self.game.next_cycle()
 
+  def handle_key(self, keycode):
+    pass
+
 class Game(object):
   def __init__(self):
     self.clock = pygame.time.Clock()
