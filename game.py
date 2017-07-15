@@ -96,13 +96,13 @@ class Robot(BaseRobot):
 
   def handle_event_type(self, event_type):
     if event_type == self.LIGHT_EVENT:
-      light_switch.off()
+      self.light_switch.off()
       super().handle_event_type(event_type)
       return
     else:
       switch = self.tier_to_switch[self.pouring_tier]
       switch.off()
-      light_switch.on()
+      self.light_switch.on()
       super().handle_event_type(event_type)
 
 # If we have the gpiozero library, we're on the Pi so use the real robot.
