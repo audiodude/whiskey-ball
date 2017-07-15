@@ -525,7 +525,7 @@ class DrinkDisplay(object):
     self.next_tier = self.tiers[next_tier_idx]
 
   def up_tier(self):
-    snd_forward.play()
+    snd_backward.play()
     self.right_arrow.animating = True
     next_tier_idx = self.current_tier['tier'] - 1 + 1
     if next_tier_idx == len(self.tiers):
