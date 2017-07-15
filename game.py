@@ -19,9 +19,9 @@ screen = pygame.display.set_mode((0,0), pygame.FULLSCREEN)
 pygame.mouse.set_visible(False)
 
 # Should be 60
-GAME_DURATION_SECS = 3
+GAME_DURATION_SECS = 5
 # Should be True
-USE_MUSIC = False
+USE_MUSIC = True
 # Should be 60 * 1000
 POUR_TIME_MS = 20 * 1000
 # Should be 10 * 1000
