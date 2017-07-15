@@ -96,7 +96,7 @@ class Robot(BaseRobot):
 
   def handle_event_type(self, event_type):
     super().handle_event_type(event_type)
-    if event_type == LIGHT_EVENT:
+    if event_type == self.LIGHT_EVENT:
       light_switch.off()
       return
     switch = self.tier_to_switch[self.pouring_tier]
