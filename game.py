@@ -23,7 +23,7 @@ GAME_DURATION_SECS = 3
 # Should be True
 USE_MUSIC = False
 # Should be 60 * 1000
-POUR_TIME_MS = 3 * 1000
+POUR_TIME_MS = 20 * 1000
 # Should be 10 * 1000
 LIGHT_TIME_MS = 1 * 1000
 
@@ -55,11 +55,11 @@ class BaseRobot(object):
     self.tier_to_drink = dict((i, drink) for i, drink in enumerate(drinks))
     self.pouring_tier = None
 
-  def is_drink_pouring(self):
+  def is_pouring_drink(self):
     return self.pouring_tier != None
 
   def pour_drink(self, tier):
-    if self.is_drink_pouring():
+    if self.is_pouring_drink():
       raise ValueError('Refusing to pour drink while drink is already pouring')
 
     self.pouring_tier = tier
@@ -142,6 +142,11 @@ for i in range(50):
   s = pygame.image.load(filename)
   title_surfaces.append(s.convert())
 
+spinner_surfaces = []
+for i in range(50):
+  filename = 'spinner/spinner%02d.jpg' % i
+  s = pygame.image.load(filename)
+  spinner_surfaces.append(s.convert())
 
 class TitleDisplay(object):
   def __init__(self, game):
@@ -512,7 +517,8 @@ class DrinkDisplay(object):
     self.current_tier = self.next_tier
 
   def pour_drink(self):
-    robot.pour_drink(self.current_tier['tier'] - 1)
+    self.game.set_drink_to_pour(self.current_tier['tier'] - 1)
+    self.game.try_to_pour_drink()
     self.game.goto_enter_score()
 
 class Initials(object):
@@ -704,7 +710,6 @@ class WinnerDisplay(object):
       self.elapsed = 0
       self.showing = not self.showing
 
-
   def handle_key(self, keycode):
     if keycode == pygame.K_SPACE:
       self.game.goto_game_over()
@@ -814,6 +819,40 @@ class HighScoresDisplay(object):
     if keycode == pygame.K_SPACE:
       self.game.goto_main()
 
+class PleaseWaitDisplay(object):
+  def __init__(self, game):
+    self.game = game
+    self.elapsed = 0
+    self.elapsed_poll = 0
+    self.idx = 0
+    self.drink_for = game.drink_for
+
+  def draw(self):
+    screen.fill(clr_neon_blue)
+    screen.blit(spinner_surfaces[self.idx], (0, 0))
+
+    pouring_string = 'Pouring drink for %s' % self.drink_for
+    txt_pouring = fnt_arcade_50.render(pouring_string, 1, clr_neon_pink)
+    pouring_x = (width - txt_pouring.get_width()) // 2
+    screen.blit(txt_pouring, (pouring_x, 100))
+
+    txt_wait = fnt_arcade_50.render('Please Wait', 1, clr_neon_pink)
+    wait_x = (width - txt_wait.get_width()) // 2
+    screen.blit(txt_wait, (wait_x, 100 + txt_pouring.get_height()))
+
+  def update(self, tick):
+    self.elapsed += tick
+    self.elapsed_poll += tick
+    if self.elapsed > 30:
+      self.elapsed = 0
+      self.idx += 1
+      if self.idx == len(spinner_surfaces):
+        self.idx = 0
+    if self.elapsed_poll > 6000:
+      self.elapsed_poll = 0
+      if not robot.is_pouring_drink():
+        self.game.next_cycle()
+
 class Game(object):
   def __init__(self):
     self.clock = pygame.time.Clock()
@@ -821,6 +860,7 @@ class Game(object):
     self.score = 0
     self.scores = []
     self.total_players = 1
+    self.drink_for = None
 
   def handle_key(self, keycode):
     self.current_state.handle_key(keycode)
@@ -837,9 +877,16 @@ class Game(object):
     self.total_players = players
     self.scores = []
     self.current_state = MainDisplay(self)
+    self.poured_drink = False
 
   def next_cycle(self):
     cur_player = self._get_cur_player()
+    if not self.poured_drink:
+      poured = self.try_to_pour_drink(blocking=True)
+      if not poured:
+        return
+      else:
+        self.drink_for = self.scores[self._get_cur_player() - 1][1]
     if cur_player == self.total_players:
       if cur_player != 1:
         self.goto_winner_display()
@@ -874,7 +921,21 @@ class Game(object):
     self.current_state = WinnerDisplay(self)
 
   def set_cur_player_initials(self, initials):
+    if not self.drink_for:
+      self.drink_for = initials
     self.scores[self._get_cur_player() - 1].append(initials)
+
+  def set_drink_to_pour(self, tier):
+    self.drink_to_pour_tier = tier
+
+  def try_to_pour_drink(self, blocking=False):
+    if robot.is_pouring_drink():
+      if blocking:
+        self.current_state = PleaseWaitDisplay(self)
+      return False
+    robot.pour_drink(self.drink_to_pour_tier)
+    self.poured_drink = True
+    return True
 
   def _get_cur_player(self):
     if self.total_players > 1:
