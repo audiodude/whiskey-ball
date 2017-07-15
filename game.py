@@ -24,6 +24,8 @@ GAME_DURATION_SECS = 3
 USE_MUSIC = False
 # Should be 60 * 1000
 POUR_TIME_MS = 3 * 1000
+# Should be 10 * 1000
+LIGHT_TIME_MS = 1 * 1000
 
 scoremap = json.load(open('scoremap.json'))
 scorekey_to_string = {
@@ -47,6 +49,7 @@ class BaseRobot(object):
     2: pygame.USEREVENT + 2,
   }
   EVENT_TO_TIER = dict((value, key) for key, value in TIER_TO_EVENT.items())
+  LIGHT_EVENT = pygame.USEREVENT + 3
 
   def __init__(self):
     self.tier_to_drink = dict((i, drink) for i, drink in enumerate(drinks))
@@ -57,7 +60,7 @@ class BaseRobot(object):
 
   def pour_drink(self, tier):
     if self.is_drink_pouring():
-      raise 'Refusing to pour drink while drink is already pouring'
+      raise ValueError('Refusing to pour drink while drink is already pouring')
 
     self.pouring_tier = tier
     drink = self.tier_to_drink[tier]
@@ -66,10 +69,15 @@ class BaseRobot(object):
     pygame.time.set_timer(event, POUR_TIME_MS)
 
   def handle_event_type(self, event_type):
+    pygame.time.set_timer(event_type, 0)
+    if event_type == self.LIGHT_EVENT:
+      return
     if self.EVENT_TO_TIER[event_type] != self.pouring_tier:
-      raise 'Got back pour END event that did not match currently pouring drink'
+      raise ValueError('Got back pour END event that did not match currently '
+                       'pouring drink')
     print('Done pouring %s' % self.tier_to_drink[self.pouring_tier])
     self.pouring_tier = None
+    pygame.time.set_timer(self.LIGHT_EVENT, LIGHT_TIME_MS)
 
 class Robot(BaseRobot):
   def __init__(self):
@@ -77,8 +85,9 @@ class Robot(BaseRobot):
     self.tier_to_switch = {
       0: LED(0),
       1: LED(5),
-      2: LED(13),
+      2: LED(6),
     }
+    self.light_switch = LED(13)
 
   def pour_drink(self, tier):
     super().pour_drink(tier)
@@ -87,8 +96,12 @@ class Robot(BaseRobot):
 
   def handle_event_type(self, event_type):
     super().handle_event_type(event_type)
+    if event_type == LIGHT_EVENT:
+      light_switch.off()
+      return
     switch = self.tier_to_switch[self.pouring_tier]
     switch.off()
+    light_switch.on()
 
 # If we have the gpiozero library, we're on the Pi so use the real robot.
 # Otherwise use the base/fake robot.
@@ -886,7 +899,7 @@ while True:
         sys.exit()
       else:
         game.handle_key(event.key)
-    elif event.type > pygame.USEREVENT:
+    elif event.type >= pygame.USEREVENT:
       robot.handle_event_type(event.type)
 
   screen.fill(clr_grey)
