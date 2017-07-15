@@ -14,6 +14,7 @@ import sys
 
 import pygame
 
+pygame.mixer.pre_init(44100, -16, 1, 64)
 pygame.init()
 screen = pygame.display.set_mode((0,0), pygame.FULLSCREEN)
 pygame.mouse.set_visible(False)
@@ -138,6 +139,9 @@ fnt_mono_120 = pygame.font.Font(MONO_FONT_NAME, 120)
 fnt_mono_100 = pygame.font.Font(MONO_FONT_NAME, 100)
 NAME_OFFSET_Y = 40
 
+snd_target_hit = pygame.mixer.Sound(file='sound_fx/trolley-bell-1.wav')
+snd_start_game = pygame.mixer.Sound(file='sound_fx/click-sweeper-bright-1.wav')
+
 title_surfaces = []
 for i in range(50):
   filename = 'title/title%02d.jpg' % i
@@ -189,6 +193,9 @@ class GameOverDisplay(object):
     self.colors = [clr_neon_blue, clr_neon_green, clr_neon_pink]
     self.top_idx = 0
     self.bottom_idx = 1
+    if USE_MUSIC and not pygame.mixer.music.get_busy():
+      pygame.mixer.music.load('sound_fx/bass-z.wav')
+      pygame.mixer.music.play(-1)
 
   def draw(self):
     self.top.fill(self.colors[self.top_idx])
@@ -303,6 +310,7 @@ class MainDisplay(object):
     string = scorekey_to_string.get(keycode, '0')
     plus_score = scoremap.get(string, 0)
     if plus_score:
+      snd_target_hit.play()
       self.game.score += plus_score
       if self.animate_score:
         self.animate_score.showing = False
@@ -416,6 +424,9 @@ class DrinkDisplay(object):
     self.right_arrow = Arrow('>', self)
     self.focus = 'left'
     self.init_tier()
+    if USE_MUSIC:
+      pygame.mixer.music.load('sound_fx/bass-z.wav')
+      pygame.mixer.music.play(-1)
 
   def init_tier(self):
     self.tiers = []
@@ -881,8 +892,9 @@ class Game(object):
     self.score = 0
     self.total_players = players
     self.scores = []
-    self.current_state = MainDisplay(self)
     self.poured_drink = False
+    snd_start_game.play()
+    self.current_state = MainDisplay(self)
 
   def next_cycle(self):
     cur_player = self._get_cur_player()
@@ -899,6 +911,7 @@ class Game(object):
         self.goto_game_over()
     else:
       self.score = 0
+      self.poured_drink = False
       self.current_state = MainDisplay(self)
 
   def goto_main(self):
