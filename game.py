@@ -249,6 +249,49 @@ class ScoreAnimation(object):
       self.cycles += 1
       self.showing = not self.showing
 
+class GetReadyDisplay(object):
+  def __init__(self, game, display_player=None):
+    self.game = game
+    self.display_player = display_player
+    self.showing = True
+    self.blink_elapsed = 0
+    self.elapsed = 0
+    self.countdown = 5
+
+  def draw(self):
+    screen.fill(clr_neon_blue)
+    if self.display_player:
+      player_string = 'Player %s' % self.display_player
+      txt_player = fnt_arcade_100.render(player_string, 1, clr_neon_pink)
+      player_x = (width - txt_player.get_width()) // 2
+      screen.blit(txt_player, (player_x, 100))
+
+    if self.showing:
+      txt_ready = fnt_arcade_100.render('Get ready!', 1, clr_neon_pink)
+      ready_x = (width - txt_ready.get_width()) // 2
+      screen.blit(txt_ready, (ready_x, 150))
+
+    txt_countdown = fnt_arcade_140.render(str(self.countdown), 1, clr_black)
+    countdown_x = (width - txt_countdown.get_width()) // 2
+    screen.blit(txt_countdown, (countdown_x, 400))
+
+  def update(self, tick):
+    self.blink_elapsed += tick
+    self.elapsed += tick
+
+    if self.blink_elapsed > 50:
+      self.blink_elapsed = 0
+      self.showing = not self.showing
+
+    if self.elapsed >= 1000:
+      self.elapsed = 0
+      self.countdown -= 1
+      if self.countdown == 0:
+        self.game.goto_main()
+
+  def handle_key(self, keycode):
+    pass
+
 class MainDisplay(object):
   def __init__(self, game):
     self.game = game
@@ -357,7 +400,8 @@ class PlayerSelect(object):
     elif keycode == pygame.K_PERIOD:
       self.inc_players()
     elif keycode == pygame.K_SPACE:
-      self.game.start_game(self.players)
+      self.game.set_players(self.players)
+      self.game.goto_get_ready()
 
   def dec_players(self):
     self.left_arrow.animating = True
@@ -875,7 +919,7 @@ class Game(object):
     tick = self.clock.tick(30)
     result = self.current_state.update(tick)
 
-  def start_game(self, players=1):
+  def start_game(self):
     self.score = 0
     self.total_players = players
     self.scores = []
@@ -898,6 +942,9 @@ class Game(object):
     else:
       self.score = 0
       self.current_state = MainDisplay(self)
+
+  def goto_get_ready(self):
+    self.current_state = GetReadyDisplay(self)
 
   def goto_main(self):
     self.current_state = PlayerSelect(self)
