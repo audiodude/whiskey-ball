@@ -14,7 +14,7 @@ import sys
 
 import pygame
 
-pygame.mixer.pre_init(44100, -16, 1, 64)
+pygame.mixer.pre_init(44100, -16, 2, 128)
 pygame.init()
 screen = pygame.display.set_mode((0,0), pygame.FULLSCREEN)
 pygame.mouse.set_visible(False)
