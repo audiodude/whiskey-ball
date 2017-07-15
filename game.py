@@ -141,6 +141,9 @@ NAME_OFFSET_Y = 40
 
 snd_target_hit = pygame.mixer.Sound(file='sound_fx/trolley-bell-1.wav')
 snd_start_game = pygame.mixer.Sound(file='sound_fx/click-sweeper-bright-1.wav')
+snd_enter_letter = pygame.mixer.Sound(file='sound_fx/click-synth-shimmer.wav')
+snd_enter_initials = pygame.mixer.Sound(file='sound_fx/click-synth-flutter.wav')
+snd_del_letter = pygame.mixer.Sound(file='sound_fx/click-soft-digital.wav')
 
 title_surfaces = []
 for i in range(50):
@@ -596,15 +599,18 @@ class Initials(object):
   def enter(self):
     ltr = self.get_letter()
     if ltr == self.checkmark:
+      snd_enter_initials.play()
       name = ''
       for i in range(3):
         name += self.get_letter(i)
       self.state.record_score(name)
     elif ltr == self.delete:
+      snd_del_letter.play()
       if self.top_idx != 0:
         self.ltr_indices[self.top_idx] = -1
         self.top_idx -= 1
     else:
+      snd_enter_letter.play()
       self.top_idx += 1
       self.ltr_indices[self.top_idx] = 0
 
