@@ -18,8 +18,85 @@ pygame.init()
 screen = pygame.display.set_mode((0,0), pygame.FULLSCREEN)
 pygame.mouse.set_visible(False)
 
+# Should be 60
 GAME_DURATION_SECS = 3
+# Should be True
 USE_MUSIC = False
+# Should be 60 * 1000
+POUR_TIME_MS = 3 * 1000
+
+scoremap = json.load(open('scoremap.json'))
+scorekey_to_string = {
+  pygame.K_1: '1',
+  pygame.K_2: '2',
+  pygame.K_3: '3',
+  pygame.K_4: '4',
+  pygame.K_5: '5',
+  pygame.K_6: '6',
+}
+rewardmap = json.load(open('rewardmap.json'))
+drinks = rewardmap['drinks']
+tiers = rewardmap['tiers']
+assert len(drinks) == len(tiers), ('Tiers and drinks do not match, check '
+                                   'rewardmap.json')
+
+class BaseRobot(object):
+  TIER_TO_EVENT = {
+    0: pygame.USEREVENT,
+    1: pygame.USEREVENT + 1,
+    2: pygame.USEREVENT + 2,
+  }
+  EVENT_TO_TIER = dict((value, key) for key, value in TIER_TO_EVENT.items())
+
+  def __init__(self):
+    self.tier_to_drink = dict((i, drink) for i, drink in enumerate(drinks))
+    self.pouring_tier = None
+
+  def is_drink_pouring(self):
+    return self.pouring_tier != None
+
+  def pour_drink(self, tier):
+    if self.is_drink_pouring():
+      raise 'Refusing to pour drink while drink is already pouring'
+
+    self.pouring_tier = tier
+    drink = self.tier_to_drink[tier]
+    print('Pouring %s' % drink)
+    event = self.TIER_TO_EVENT[tier]
+    pygame.time.set_timer(event, POUR_TIME_MS)
+
+  def handle_event_type(self, event_type):
+    if self.EVENT_TO_TIER[event_type] != self.pouring_tier:
+      raise 'Got back pour END event that did not match currently pouring drink'
+    print('Done pouring %s' % self.tier_to_drink[self.pouring_tier])
+    self.pouring_tier = None
+
+class Robot(BaseRobot):
+  def __init__(self):
+    super().__init__()
+    self.tier_to_switch = {
+      0: LED(0),
+      1: LED(5),
+      2: LED(13),
+    }
+
+  def pour_drink(self, tier):
+    super().pour_drink(tier)
+    switch = self.tier_to_switch[tier]
+    switch.on()
+
+  def handle_event_type(self, event_type):
+    super().handle_event_type(event_type)
+    switch = self.tier_to_switch[self.pouring_tier]
+    switch.off()
+
+# If we have the gpiozero library, we're on the Pi so use the real robot.
+# Otherwise use the base/fake robot.
+try:
+  from gpiozero import LED
+  robot = Robot()
+except ImportError:
+  robot = BaseRobot()
 
 ARCADE_FONT_NAME = 'Gameplay.ttf'
 MONO_FONT_NAME = 'DejaVuSansMono.ttf'
@@ -46,31 +123,12 @@ fnt_mono_120 = pygame.font.Font(MONO_FONT_NAME, 120)
 fnt_mono_100 = pygame.font.Font(MONO_FONT_NAME, 100)
 NAME_OFFSET_Y = 40
 
-scoremap = json.load(open('scoremap.json'))
-scorekey_to_string = {
-  pygame.K_1: '1',
-  pygame.K_2: '2',
-  pygame.K_3: '3',
-  pygame.K_4: '4',
-  pygame.K_5: '5',
-  pygame.K_6: '6',
-}
-rewardmap = json.load(open('rewardmap.json'))
-drinks = rewardmap['drinks']
-tiers = rewardmap['tiers']
-assert len(drinks) == len(tiers), ('Tiers and drinks do not match, check '
-                                   'rewardmap.json')
-tier_to_coords = {
-  2: (130, 220),
-  3: (240, 220),
-  4: (210, 220),
-}
-
 title_surfaces = []
 for i in range(50):
   filename = 'title/title%02d.jpg' % i
   s = pygame.image.load(filename)
   title_surfaces.append(s.convert())
+
 
 class TitleDisplay(object):
   def __init__(self, game):
@@ -441,7 +499,7 @@ class DrinkDisplay(object):
     self.current_tier = self.next_tier
 
   def pour_drink(self):
-    # TODO: Pour the drink
+    robot.pour_drink(self.current_tier['tier'] - 1)
     self.game.goto_enter_score()
 
 class Initials(object):
@@ -828,6 +886,8 @@ while True:
         sys.exit()
       else:
         game.handle_key(event.key)
+    elif event.type > pygame.USEREVENT:
+      robot.handle_event_type(event.type)
 
   screen.fill(clr_grey)
   game.update()
