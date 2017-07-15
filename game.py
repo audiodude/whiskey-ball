@@ -722,6 +722,7 @@ class HighScoresDisplay(object):
       return
     if ((self.cur_top <= 0 and self.start_top > 0) or 
         (self.cur_top >= 0 and self.start_top < 0)):
+      self.cur_top = 0
       self.total_elapsed += tick
       if self.elapsed > 80:
         self.show_top = not self.show_top
