@@ -3,7 +3,7 @@
 # Controls:
 # 
 # SPC  Start game, select drink
-# 1-6  Score points during gameplay
+# 1-5  Score points during gameplay
 # ,    Move left in menus
 # .    Move right in menus
 # ESC  Quit at any time
