@@ -14,14 +14,15 @@ import sys
 
 import pygame
 
+pygame.mixer.pre_init(44100, -16, 2, 1024)
 pygame.init()
 screen = pygame.display.set_mode((0,0), pygame.FULLSCREEN)
 pygame.mouse.set_visible(False)
 
 # Should be 60
-GAME_DURATION_SECS = 3
+GAME_DURATION_SECS = 5
 # Should be True
-USE_MUSIC = False
+USE_MUSIC = True
 # Should be 60 * 1000
 POUR_TIME_MS = 20 * 1000
 # Should be 10 * 1000
@@ -95,13 +96,15 @@ class Robot(BaseRobot):
     switch.on()
 
   def handle_event_type(self, event_type):
-    super().handle_event_type(event_type)
-    if event_type == LIGHT_EVENT:
-      light_switch.off()
+    if event_type == self.LIGHT_EVENT:
+      self.light_switch.off()
+      super().handle_event_type(event_type)
       return
-    switch = self.tier_to_switch[self.pouring_tier]
-    switch.off()
-    light_switch.on()
+    else:
+      switch = self.tier_to_switch[self.pouring_tier]
+      switch.off()
+      self.light_switch.on()
+      super().handle_event_type(event_type)
 
 # If we have the gpiozero library, we're on the Pi so use the real robot.
 # Otherwise use the base/fake robot.
@@ -135,6 +138,13 @@ fnt_mono_200 = pygame.font.Font(MONO_FONT_NAME, 200)
 fnt_mono_120 = pygame.font.Font(MONO_FONT_NAME, 120)
 fnt_mono_100 = pygame.font.Font(MONO_FONT_NAME, 100)
 NAME_OFFSET_Y = 40
+
+snd_target_hit = pygame.mixer.Sound(file='sound_fx/trolley-bell-1.wav')
+snd_start_game = pygame.mixer.Sound(file='sound_fx/click-sweeper-bright-1.wav')
+snd_forward = pygame.mixer.Sound(file='sound_fx/click-synth-shimmer.wav')
+snd_accepted = pygame.mixer.Sound(file='sound_fx/click-synth-flutter.wav')
+snd_backward = pygame.mixer.Sound(file='sound_fx/click-soft-digital.wav')
+snd_denied = pygame.mixer.Sound(file='sound_fx/click-double-digital.wav')
 
 title_surfaces = []
 for i in range(50):
@@ -187,6 +197,9 @@ class GameOverDisplay(object):
     self.colors = [clr_neon_blue, clr_neon_green, clr_neon_pink]
     self.top_idx = 0
     self.bottom_idx = 1
+    if USE_MUSIC and not pygame.mixer.music.get_busy():
+      pygame.mixer.music.load('sound_fx/bass-z.wav')
+      pygame.mixer.music.play(-1)
 
   def draw(self):
     self.top.fill(self.colors[self.top_idx])
@@ -344,6 +357,7 @@ class MainDisplay(object):
     string = scorekey_to_string.get(keycode, '0')
     plus_score = scoremap.get(string, 0)
     if plus_score:
+      snd_target_hit.play()
       self.game.score += plus_score
       if self.animate_score:
         self.animate_score.showing = False
@@ -458,6 +472,9 @@ class DrinkDisplay(object):
     self.right_arrow = Arrow('>', self)
     self.focus = 'left'
     self.init_tier()
+    if USE_MUSIC:
+      pygame.mixer.music.load('sound_fx/bass-z.wav')
+      pygame.mixer.music.play(-1)
 
   def init_tier(self):
     self.tiers = []
@@ -544,6 +561,7 @@ class DrinkDisplay(object):
       self.pour_drink()
 
   def down_tier(self):
+    snd_backward.play()
     self.left_arrow.animating = True
     next_tier_idx = self.current_tier['tier'] - 1 - 1
     if next_tier_idx == -1:
@@ -551,6 +569,7 @@ class DrinkDisplay(object):
     self.next_tier = self.tiers[next_tier_idx]
 
   def up_tier(self):
+    snd_backward.play()
     self.right_arrow.animating = True
     next_tier_idx = self.current_tier['tier'] - 1 + 1
     if next_tier_idx == len(self.tiers):
@@ -561,9 +580,13 @@ class DrinkDisplay(object):
     self.current_tier = self.next_tier
 
   def pour_drink(self):
-    self.game.set_drink_to_pour(self.current_tier['tier'] - 1)
-    self.game.try_to_pour_drink()
-    self.game.goto_enter_score()
+    if self.current_tier['locked']:
+      snd_denied.play()
+    else:
+      snd_accepted.play()
+      self.game.set_drink_to_pour(self.current_tier['tier'] - 1)
+      self.game.try_to_pour_drink()
+      self.game.goto_enter_score()
 
 class Initials(object):
   delete = '⌫'
@@ -627,15 +650,18 @@ class Initials(object):
   def enter(self):
     ltr = self.get_letter()
     if ltr == self.checkmark:
+      snd_accepted.play()
       name = ''
       for i in range(3):
         name += self.get_letter(i)
       self.state.record_score(name)
     elif ltr == self.delete:
+      snd_backward.play()
       if self.top_idx != 0:
         self.ltr_indices[self.top_idx] = -1
         self.top_idx -= 1
     else:
+      snd_forward.play()
       self.top_idx += 1
       self.ltr_indices[self.top_idx] = 0
 
@@ -923,8 +949,9 @@ class Game(object):
     self.score = 0
     self.total_players = players
     self.scores = []
-    self.current_state = MainDisplay(self)
     self.poured_drink = False
+    snd_start_game.play()
+    self.current_state = MainDisplay(self)
 
   def next_cycle(self):
     cur_player = self._get_cur_player()
@@ -941,6 +968,7 @@ class Game(object):
         self.goto_game_over()
     else:
       self.score = 0
+      self.poured_drink = False
       self.current_state = MainDisplay(self)
 
   def goto_get_ready(self):
