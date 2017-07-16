@@ -21,13 +21,13 @@ screen = pygame.display.set_mode((0,0), pygame.FULLSCREEN)
 pygame.mouse.set_visible(False)
 
 # Should be 60
-GAME_DURATION_SECS = 5
+GAME_DURATION_SECS = 60
 # Should be True
 USE_MUSIC = True
 # Should be 60 * 1000
-POUR_TIME_MS = 20 * 1000
+POUR_TIME_MS = 60 * 1000
 # Should be 10 * 1000
-LIGHT_TIME_MS = 1 * 1000
+LIGHT_TIME_MS = 10 * 1000
 
 scoremap = json.load(open('scoremap.json'))
 scorekey_to_string = {
