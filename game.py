@@ -84,9 +84,9 @@ class Robot(BaseRobot):
   def __init__(self):
     super().__init__()
     self.tier_to_switch = {
-      0: (LED(0), LED(5))
-      1: (LED(6), LED(13))
-      2: (LED(19),)
+      0: (LED(0), LED(5)),
+      1: (LED(6), LED(13)),
+      2: (LED(19),),
     }
     self.light_switch = LED(26)
 
