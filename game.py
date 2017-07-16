@@ -415,6 +415,7 @@ class PlayerSelect(object):
       self.inc_players()
     elif keycode == pygame.K_SPACE:
       self.game.set_players(self.players)
+      snd_start_game.play()
       self.game.goto_get_ready()
 
   def dec_players(self):
@@ -948,7 +949,6 @@ class Game(object):
   def start_game(self):
     self.score = 0
     self.poured_drink = False
-    snd_start_game.play()
     self.current_state = MainDisplay(self)
 
   def next_cycle(self):
@@ -967,7 +967,7 @@ class Game(object):
     else:
       self.score = 0
       self.poured_drink = False
-      self.current_state = GetReadyDisplay(self, display_player=cur_player + 1)
+      self.goto_get_ready()
 
   def goto_get_ready(self):
     self.current_state = GetReadyDisplay(
@@ -975,6 +975,7 @@ class Game(object):
 
   def goto_main(self):
     self.scores = []
+    self.total_players = 1
     self.current_state = PlayerSelect(self)
 
   def goto_game_over(self):
@@ -1019,9 +1020,7 @@ class Game(object):
     return True
 
   def _get_cur_player(self):
-    if self.total_players > 1:
-      return len(self.scores)
-    return 1
+    return len(self.scores)
 
 game = Game()
 
