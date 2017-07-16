@@ -295,7 +295,7 @@ class GetReadyDisplay(object):
     self.blink_elapsed += tick
     self.elapsed += tick
 
-    if self.blink_elapsed > 50:
+    if self.blink_elapsed > 100:
       self.blink_elapsed = 0
       self.showing = not self.showing
 
@@ -367,7 +367,7 @@ class MainDisplay(object):
         self.animate_score.draw()
       self.animate_score = ScoreAnimation(self.bottom, plus_score)
 
-class PlayerSelect(object):
+class PlayerSelectDisplay(object):
   def __init__(self, game):
     self.game = game
     self.elapsed = 0
@@ -422,12 +422,14 @@ class PlayerSelect(object):
       self.game.goto_get_ready()
 
   def dec_players(self):
+    snd_backward.play()
     self.left_arrow.animating = True
     self.next_players = self.players - 1
     if self.next_players == 0:
       self.next_players = 4
 
   def inc_players(self):
+    snd_backward.play()
     self.right_arrow.animating = True
     self.next_players = self.players + 1
     if self.next_players == 5:
@@ -1010,7 +1012,7 @@ class Game(object):
   def goto_main(self):
     self.scores = []
     self.total_players = 1
-    self.current_state = PlayerSelect(self)
+    self.current_state = PlayerSelectDisplay(self)
 
   def goto_game_over(self):
     self.current_state = GameOverDisplay(self)
