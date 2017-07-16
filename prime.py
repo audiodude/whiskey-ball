@@ -8,12 +8,16 @@ tier_to_switch = {
   2: (LED(19),),
 }
 
+print('Writing high to pins, turning them on')
 for idx, switches in tier_to_switch.items():
   for switch in switches:
     switch.on()
 
-time.sleep(30)
+sleep = 30
+print('Sleeping for %s seconds' % sleep)
+time.sleep(sleep)
 
+print('Writing low to pins, turning them off')
 for idx, switches in tier_to_switch.items():
   for switch in switches:
     switch.off()
