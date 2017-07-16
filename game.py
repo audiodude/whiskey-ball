@@ -897,6 +897,7 @@ class PleaseWaitDisplay(object):
     self.elapsed_poll = 0
     self.idx = 0
     self.drink_for = game.drink_for
+    self.done_pouring = False
 
   def draw(self):
     screen.fill(clr_neon_blue)
@@ -907,7 +908,8 @@ class PleaseWaitDisplay(object):
     pouring_x = (width - txt_pouring.get_width()) // 2
     screen.blit(txt_pouring, (pouring_x, 100))
 
-    txt_wait = fnt_arcade_50.render('Please Wait', 1, clr_neon_pink)
+    wait_string = 'Done pouring' if self.done_pouring else 'Please Wait'
+    txt_wait = fnt_arcade_50.render(wait_string, 1, clr_neon_pink)
     wait_x = (width - txt_wait.get_width()) // 2
     screen.blit(txt_wait, (wait_x, 100 + txt_pouring.get_height()))
 
@@ -922,10 +924,11 @@ class PleaseWaitDisplay(object):
     if self.elapsed_poll > 6000:
       self.elapsed_poll = 0
       if not robot.is_pouring_drink():
-        self.game.next_cycle()
+        self.done_pouring = True
 
   def handle_key(self, keycode):
-    pass
+    if keycode == pygame.K_SPACE and self.done_pouring:
+      self.game.next_cycle()
 
 class Game(object):
   def __init__(self):
