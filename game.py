@@ -24,8 +24,8 @@ pygame.mouse.set_visible(False)
 GAME_DURATION_SECS = 60
 # Should be True
 USE_MUSIC = True
-# Should be 60 * 1000
-POUR_TIME_MS = 60 * 1000
+# Should be 120 * 1000
+BASE_POUR_TIME_MS = 120 * 1000
 # Should be 10 * 1000
 LIGHT_TIME_MS = 10 * 1000
 
@@ -68,7 +68,10 @@ class BaseRobot(object):
     drink = self.tier_to_drink[tier]
     print('Pouring %s' % drink)
     event = self.TIER_TO_EVENT[tier]
-    pygame.time.set_timer(event, POUR_TIME_MS)
+    pour_time = BASE_POUR_TIME_MS // 2
+    if hasattr(self, 'tier_to_switch'):
+      pour_time = BASE_POUR_TIME_MS // len(self.tier_to_switch[tier])
+    pygame.time.set_timer(event, pour_time)
 
   def handle_event_type(self, event_type):
     pygame.time.set_timer(event_type, 0)
