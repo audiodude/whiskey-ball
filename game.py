@@ -11,6 +11,7 @@
 import json
 import os
 import sys
+import traceback
 
 import pygame
 
@@ -893,6 +894,33 @@ class HighScoresDisplay(object):
     if keycode == pygame.K_SPACE:
       self.game.goto_main()
 
+class OutOfOrderDisplay(object):
+  def __init__(self, game):
+    self.game = game
+    self.elapsed = 0
+    self.idx = 0
+    if USE_MUSIC:
+      pygame.mixer.music.stop()
+
+  def draw(self):
+    screen.fill(clr_neon_blue)
+    screen.blit(spinner_surfaces[self.idx], (0, 0))
+
+    txt_out = fnt_arcade_100.render('Out of Order', 1, clr_neon_pink)
+    out_x = (width - txt_out.get_width()) // 2
+    screen.blit(txt_out, (out_x, 100))
+
+  def update(self, tick):
+    self.elapsed += tick
+    if self.elapsed > 30:
+      self.elapsed = 0
+      self.idx += 1
+      if self.idx == len(spinner_surfaces):
+        self.idx = 0
+
+  def handle_key(self, keycode):
+    pass
+
 class PleaseWaitDisplay(object):
   def __init__(self, game):
     self.game = game
@@ -1005,6 +1033,9 @@ class Game(object):
   def goto_winner_display(self):
     self.current_state = WinnerDisplay(self)
 
+  def goto_error(self):
+    self.current_state = OutOfOrderDisplay(self)
+
   def set_cur_player_initials(self, initials):
     if not self.drink_for:
       self.drink_for = initials
@@ -1038,19 +1069,26 @@ for y in range(height):
 mask.set_colorkey(clr_white)
 
 while True:
-  for event in pygame.event.get():
-    if event.type == pygame.QUIT:
-      sys.exit()
-    elif event.type == pygame.KEYDOWN:
-      if event.key == pygame.K_ESCAPE:
+  try:
+    for event in pygame.event.get():
+      if event.type == pygame.QUIT:
         sys.exit()
-      else:
-        game.handle_key(event.key)
-    elif event.type >= pygame.USEREVENT:
-      robot.handle_event_type(event.type)
+      elif event.type == pygame.KEYDOWN:
+        if event.key == pygame.K_ESCAPE:
+          sys.exit()
+        else:
+          game.handle_key(event.key)
+      elif event.type >= pygame.USEREVENT:
+        robot.handle_event_type(event.type)
 
-  screen.fill(clr_grey)
-  game.update()
-  game.draw()
-  screen.blit(mask, (0, 0))
-  pygame.display.flip()
+    screen.fill(clr_grey)
+
+    game.update()
+    game.draw()
+    screen.blit(mask, (0, 0))
+    pygame.display.flip()
+  except Exception:
+    _, _, tb = sys.exc_info()
+    traceback.print_tb(tb)
+    game.goto_error()
+    del tb
