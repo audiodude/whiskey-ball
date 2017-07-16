@@ -84,16 +84,17 @@ class Robot(BaseRobot):
   def __init__(self):
     super().__init__()
     self.tier_to_switch = {
-      0: LED(0),
-      1: LED(5),
-      2: LED(6),
+      0: (LED(0), LED(5))
+      1: (LED(6), LED(13))
+      2: (LED(19),)
     }
-    self.light_switch = LED(13)
+    self.light_switch = LED(26)
 
   def pour_drink(self, tier):
     super().pour_drink(tier)
-    switch = self.tier_to_switch[tier]
-    switch.on()
+    switches = self.tier_to_switch[tier]
+    for switch in switches:
+      switch.on()
 
   def handle_event_type(self, event_type):
     if event_type == self.LIGHT_EVENT:
@@ -101,8 +102,9 @@ class Robot(BaseRobot):
       super().handle_event_type(event_type)
       return
     else:
-      switch = self.tier_to_switch[self.pouring_tier]
-      switch.off()
+      switches = self.tier_to_switch[self.pouring_tier]
+      for switch in switches:
+        switch.off()
       self.light_switch.on()
       super().handle_event_type(event_type)
 
