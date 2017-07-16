@@ -819,8 +819,10 @@ class HighScoresDisplay(object):
     self.cur_top = None
     self.start_top = None
     self.elapsed = 0
+    self.elapsed_participant = 0
     self.total_elapsed = 0
     self.show_top = True
+    self.show_participant = True
     self.distance = 0
     self.velocity = 2
     self.accel = 1
@@ -833,17 +835,28 @@ class HighScoresDisplay(object):
     total_height = 0
     total_width = 0
     for i, (name, score) in enumerate(self.scores):
+      is_participant = [score, name] in self.game.scores
       score_str = str(score)
+
       while len(score_str) < 4:
         score_str = ' ' + score_str
+
+      color = clr_neon_blue
+      if is_participant:
+        color = clr_neon_yellow
+
       if i < 3:
         score_line = '%s. %s %s' % (i+1, name, score_str)
         if i == 0 and not self.show_top:
           score_line = ' '
-        txt = fnt_mono_120.render(score_line, 1, clr_neon_blue)
+        if is_participant and not self.show_participant:
+          score_line = ' '
+        txt = fnt_mono_120.render(score_line, 1, color)
       else:
-        txt = fnt_mono_100.render(
-          '%s. %s %s' % (i+1, name, score_str), 1, clr_neon_blue)
+        score_line = '%s. %s %s' % (i+1, name, score_str)
+        if is_participant and not self.show_participant:
+          score_line = ' '
+        txt = fnt_mono_100.render(score_line, 1, color)
       score_surfaces.append(txt)
       total_height += txt.get_height()
       if txt.get_width() > total_width:
@@ -870,9 +883,15 @@ class HighScoresDisplay(object):
 
   def update(self, tick):
     self.elapsed += tick
+    self.elapsed_participant += tick
     if len(self.scores) <= 0:
       self.game.goto_game_over()
       return
+
+    if self.elapsed_participant > 80:
+      self.elapsed_participant = 0
+      self.show_participant = not self.show_participant
+
     if ((self.cur_top <= 0 and self.start_top > 0) or 
         (self.cur_top >= 0 and self.start_top < 0)):
       self.cur_top = 0
@@ -969,6 +988,7 @@ class Game(object):
     self.current_state = GameOverDisplay(self)
     self.score = 0
     self.scores = []
+    self.participants = []
     self.total_players = 1
     self.drink_for = None
 
@@ -1090,7 +1110,5 @@ while True:
     screen.blit(mask, (0, 0))
     pygame.display.flip()
   except Exception:
-    _, _, tb = sys.exc_info()
-    traceback.print_tb(tb)
+    print(traceback.format_exc())
     game.goto_error()
-    del tb
