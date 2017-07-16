@@ -282,7 +282,7 @@ class GetReadyDisplay(object):
     if self.showing:
       txt_ready = fnt_arcade_100.render('Get ready!', 1, clr_neon_pink)
       ready_x = (width - txt_ready.get_width()) // 2
-      screen.blit(txt_ready, (ready_x, 150))
+      screen.blit(txt_ready, (ready_x, 225))
 
     txt_countdown = fnt_arcade_140.render(str(self.countdown), 1, clr_black)
     countdown_x = (width - txt_countdown.get_width()) // 2
@@ -300,7 +300,7 @@ class GetReadyDisplay(object):
       self.elapsed = 0
       self.countdown -= 1
       if self.countdown == 0:
-        self.game.goto_main()
+        self.game.start_game()
 
   def handle_key(self, keycode):
     pass
@@ -947,8 +947,6 @@ class Game(object):
 
   def start_game(self):
     self.score = 0
-    self.total_players = players
-    self.scores = []
     self.poured_drink = False
     snd_start_game.play()
     self.current_state = MainDisplay(self)
@@ -969,12 +967,14 @@ class Game(object):
     else:
       self.score = 0
       self.poured_drink = False
-      self.current_state = MainDisplay(self)
+      self.current_state = GetReadyDisplay(self, display_player=cur_player + 1)
 
   def goto_get_ready(self):
-    self.current_state = GetReadyDisplay(self)
+    self.current_state = GetReadyDisplay(
+      self, display_player=self._get_cur_player() + 1)
 
   def goto_main(self):
+    self.scores = []
     self.current_state = PlayerSelect(self)
 
   def goto_game_over(self):
@@ -1005,6 +1005,9 @@ class Game(object):
 
   def set_drink_to_pour(self, tier):
     self.drink_to_pour_tier = tier
+
+  def set_players(self, players):
+    self.total_players = players
 
   def try_to_pour_drink(self, blocking=False):
     if robot.is_pouring_drink():
